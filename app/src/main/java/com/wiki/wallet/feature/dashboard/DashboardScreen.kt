@@ -57,6 +57,7 @@ fun DashboardRoute(
     onNavigateToHistory: () -> Unit,
     onNavigateToCategories: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToAccountDetail: (String) -> Unit,
     viewModel: DashboardViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -70,6 +71,7 @@ fun DashboardRoute(
                 DashboardUiEvent.OnNavigateToHistory -> onNavigateToHistory()
                 DashboardUiEvent.OnNavigateToCategories -> onNavigateToCategories()
                 DashboardUiEvent.OnNavigateToSettings -> onNavigateToSettings()
+                is DashboardUiEvent.OnAccountClick -> onNavigateToAccountDetail(event.accountId)
                 else -> viewModel.onEvent(event)
             }
         },
@@ -211,7 +213,10 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(uiState.accounts) { account ->
-                        AccountBalanceCard(account = account)
+                        AccountBalanceCard(
+                            account = account,
+                            onClick = { onEvent(DashboardUiEvent.OnAccountClick(account.id)) }
+                        )
                     }
                 }
             }
@@ -219,7 +224,7 @@ fun DashboardScreen(
             // Daily Net Cash Flow Bar Chart
             IncomeBarChart(
                 items = uiState.chartItems,
-                cardHeight = 190.dp
+                cardHeight = 220.dp
             )
 
             // Income / Expense / Savings Stat Row
@@ -334,6 +339,7 @@ private fun HeaderIconButton(
 @Composable
 private fun AccountBalanceCard(
     account: Account,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -342,6 +348,7 @@ private fun AccountBalanceCard(
             .clip(WalletShapes.CardMedium)
             .background(WalletColors.Paper)
             .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+            .clickable { onClick() }
             .padding(14.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

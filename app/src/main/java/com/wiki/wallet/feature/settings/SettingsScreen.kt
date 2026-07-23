@@ -15,22 +15,31 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wiki.wallet.core.designsystem.theme.WalletColors
@@ -59,12 +68,15 @@ fun SettingsRoute(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     uiState: SettingsUiState,
     onEvent: (SettingsUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val selectedItem = uiState.currencies.firstOrNull { it.code == uiState.selectedCurrency }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -109,7 +121,7 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.width(44.dp))
             }
 
-            // Section 1: Default Currency
+            // Section 1: Default Currency Selector Card
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = "Default Currency",
@@ -117,37 +129,45 @@ fun SettingsScreen(
                     color = WalletColors.TextPrimary
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(WalletShapes.CardMedium)
+                        .background(WalletColors.Paper)
+                        .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                        .clickable { onEvent(SettingsUiEvent.OnCurrencyPickerToggle(true)) }
+                        .padding(16.dp)
                 ) {
-                    uiState.availableCurrencies.forEach { curr ->
-                        val isSelected = curr == uiState.selectedCurrency
-                        Box(
-                            modifier = Modifier
-                                .clip(WalletShapes.Pill)
-                                .background(if (isSelected) WalletColors.Ink else WalletColors.Paper)
-                                .border(1.dp, if (isSelected) WalletColors.Ink else WalletColors.CardBorder, WalletShapes.Pill)
-                                .clickable { onEvent(SettingsUiEvent.OnCurrencySelected(curr)) }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                }
+                            Text(text = selectedItem?.flag ?: "🌐", style = WalletTypography.TitleM)
+                            Column {
                                 Text(
-                                    text = curr,
-                                    style = WalletTypography.LabelM,
-                                    color = if (isSelected) Color.White else WalletColors.TextPrimary
+                                    text = "${selectedItem?.code} - ${selectedItem?.name ?: "Currency"}",
+                                    style = WalletTypography.TitleM,
+                                    color = WalletColors.TextPrimary
+                                )
+                                Text(
+                                    text = "Symbol: ${selectedItem?.symbol ?: "$"}",
+                                    style = WalletTypography.LabelS,
+                                    color = WalletColors.TextMuted
                                 )
                             }
                         }
+
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Select Currency",
+                            tint = WalletColors.Ink,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }
@@ -261,10 +281,129 @@ fun SettingsScreen(
                         Text(text = "App Version", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
                     }
                     Text(
-                        text = "v${uiState.appVersion}",
+                        text = "ApexBudget v${uiState.appVersion}",
                         style = WalletTypography.LabelM,
                         color = WalletColors.Coral
                     )
+                }
+            }
+        }
+    }
+
+    // Modal Bottom Sheet for Currency Selection List
+    if (uiState.isCurrencyPickerOpen) {
+        ModalBottomSheet(
+            onDismissRequest = { onEvent(SettingsUiEvent.OnCurrencyPickerToggle(false)) },
+            sheetState = rememberModalBottomSheetState(),
+            containerColor = WalletColors.PaperPure
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Select Country Currency",
+                    style = WalletTypography.TitleM,
+                    color = WalletColors.TextPrimary
+                )
+
+                // Search Bar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(WalletShapes.CardMedium)
+                        .background(WalletColors.Paper)
+                        .padding(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = WalletColors.TextMuted,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        BasicTextField(
+                            value = uiState.searchQuery,
+                            onValueChange = { onEvent(SettingsUiEvent.OnSearchQueryChanged(it)) },
+                            textStyle = WalletTypography.BodyM.copy(color = WalletColors.TextPrimary),
+                            singleLine = true,
+                            cursorBrush = SolidColor(WalletColors.Coral),
+                            decorationBox = { innerTextField ->
+                                Box {
+                                    if (uiState.searchQuery.isEmpty()) {
+                                        Text(
+                                            text = "Search by code or country name...",
+                                            style = WalletTypography.BodyM,
+                                            color = WalletColors.TextMuted
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        )
+                    }
+                }
+
+                val filteredCurrencies = uiState.currencies.filter {
+                    it.code.contains(uiState.searchQuery, ignoreCase = true) ||
+                    it.name.contains(uiState.searchQuery, ignoreCase = true)
+                }
+
+                LazyColumn(
+                    modifier = Modifier.height(350.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filteredCurrencies) { item ->
+                        val isSelected = item.code == uiState.selectedCurrency
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(WalletShapes.CardMedium)
+                                .background(if (isSelected) WalletColors.Ink else WalletColors.Paper)
+                                .clickable { onEvent(SettingsUiEvent.OnCurrencySelected(item.code)) }
+                                .padding(14.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Text(text = item.flag, style = WalletTypography.TitleM)
+                                    Column {
+                                        Text(
+                                            text = "${item.code} - ${item.name}",
+                                            style = WalletTypography.TitleM,
+                                            color = if (isSelected) WalletColors.TextOnDark else WalletColors.TextPrimary
+                                        )
+                                        Text(
+                                            text = "Symbol: ${item.symbol}",
+                                            style = WalletTypography.LabelS,
+                                            color = if (isSelected) WalletColors.TextMuted else WalletColors.TextMuted
+                                        )
+                                    }
+                                }
+
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = WalletColors.MintChip,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

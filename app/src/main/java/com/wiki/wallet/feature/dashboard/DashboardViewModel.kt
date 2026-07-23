@@ -33,6 +33,7 @@ data class DashboardUiState(
 
 sealed interface DashboardUiEvent {
     data class OnPeriodSelected(val period: TimePeriod) : DashboardUiEvent
+    data class OnAccountClick(val accountId: String) : DashboardUiEvent
     data class OnTransactionClick(val transaction: Transaction) : DashboardUiEvent
     data object OnNavigateToAddTransaction : DashboardUiEvent
     data object OnNavigateToHistory : DashboardUiEvent
@@ -59,6 +60,8 @@ class DashboardViewModel(
                 BarChartItem(
                     dayLabel = item.dayLabel,
                     valueRatio = item.ratioOfMax,
+                    incomeAmount = if (item.netAmount > 0) item.netAmount else 0.0,
+                    expenseAmount = if (item.netAmount < 0) kotlin.math.abs(item.netAmount) else 0.0,
                     isActive = idx == summary.chartItems.lastIndex,
                     isPositive = item.isNetPositive,
                     deltaChipText = if (item.netAmount != 0.0) {

@@ -13,9 +13,11 @@ import com.wiki.wallet.domain.repository.TransactionRepository
 import com.wiki.wallet.domain.usecase.AddTransactionUseCase
 import com.wiki.wallet.domain.usecase.GetCategoriesUseCase
 import com.wiki.wallet.domain.usecase.GetDashboardSummaryUseCase
+import com.wiki.wallet.feature.account.AccountDetailViewModel
 import com.wiki.wallet.feature.categories.CategoriesViewModel
 import com.wiki.wallet.feature.dashboard.DashboardViewModel
 import com.wiki.wallet.feature.history.HistoryViewModel
+import com.wiki.wallet.feature.onboarding.OnboardingViewModel
 import com.wiki.wallet.feature.settings.SettingsViewModel
 import com.wiki.wallet.feature.swap.SwapViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -70,6 +72,13 @@ class AppContainer(private val context: Context) {
         )
     }
 
+    val onboardingViewModelFactory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return OnboardingViewModel(context) as T
+        }
+    }
+
     val dashboardViewModelFactory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -114,6 +123,17 @@ class AppContainer(private val context: Context) {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return SettingsViewModel(
                 accountRepository = accountRepository
+            ) as T
+        }
+    }
+
+    fun accountDetailViewModelFactory(accountId: String): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return AccountDetailViewModel(
+                accountId = accountId,
+                accountRepository = accountRepository,
+                transactionRepository = transactionRepository
             ) as T
         }
     }

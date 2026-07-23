@@ -6,6 +6,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,11 +18,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,12 +45,15 @@ import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 data class BarChartItem(
     val dayLabel: String,
     val valueRatio: Float,
+    val incomeAmount: Double = 0.0,
+    val expenseAmount: Double = 0.0,
     val isActive: Boolean = false,
-    val isPositive: Boolean = true, // MintChip for net positive, Coral for net expense
+    val isPositive: Boolean = true,
     val deltaChipText: String? = null,
     val isDeltaPositive: Boolean = true
 )
@@ -61,7 +71,7 @@ fun HatchedBar(
     LaunchedEffect(heightRatio) {
         delay(animationDelayMs)
         animatedRatio.animateTo(
-            targetValue = heightRatio.coerceIn(0.1f, 1f),
+            targetValue = heightRatio.coerceIn(0.08f, 1f),
             animationSpec = spring(
                 dampingRatio = 0.75f,
                 stiffness = Spring.StiffnessLow
@@ -81,8 +91,8 @@ fun HatchedBar(
                     Modifier.background(barColor)
                 } else {
                     Modifier
-                        .background(barColor.copy(alpha = 0.15f))
-                        .border(1.dp, barColor.copy(alpha = 0.4f), WalletShapes.BarRounded)
+                        .background(barColor.copy(alpha = 0.25f))
+                        .border(1.dp, barColor.copy(alpha = 0.5f), WalletShapes.BarRounded)
                 }
             )
     ) {
@@ -92,7 +102,7 @@ fun HatchedBar(
                 val height = size.height
                 val strokeWidth = 1.dp.toPx()
                 val step = 8.dp.toPx()
-                val strokeColor = barColor.copy(alpha = 0.35f)
+                val strokeColor = barColor.copy(alpha = 0.4f)
 
                 val cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx())
                 val path = Path().apply {
@@ -128,8 +138,10 @@ fun HatchedBar(
 fun IncomeBarChart(
     items: List<BarChartItem>,
     modifier: Modifier = Modifier,
-    cardHeight: Dp = 190.dp
+    cardHeight: Dp = 220.dp
 ) {
+    var selectedIndex by remember { mutableStateOf<Int?>(null) }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -137,65 +149,127 @@ fun IncomeBarChart(
             .clip(WalletShapes.CardLarge)
             .background(WalletColors.Paper)
             .border(1.dp, WalletColors.CardBorder, WalletShapes.CardLarge)
-            .padding(18.dp)
+            .padding(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.Bottom
-        ) {
-            items.forEachIndexed { index, item ->
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.BottomCenter
-                    ) {
-                        if (item.deltaChipText != null) {
-                            DeltaChip(
-                                text = item.deltaChipText,
-                                isPositive = item.isDeltaPositive,
-                                modifier = Modifier.offset(y = (-4).dp)
-                            )
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .height(100.dp)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.BottomCenter
-                    ) {
-                        HatchedBar(
-                            heightRatio = item.valueRatio,
-                            isActive = item.isActive,
-                            isPositive = item.isPositive,
-                            modifier = Modifier
-                                .fillMaxWidth(0.75f)
-                                .fillMaxHeight(),
-                            animationDelayMs = (index * 40).toLong()
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Chart Legend & Selected Day Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Selected Day breakdown if tapped
+                val selectedItem = selectedIndex?.let { items.getOrNull(it) }
+                if (selectedItem != null) {
                     Text(
-                        text = item.dayLabel,
-                        style = WalletTypography.LabelS,
+                        text = "${selectedItem.dayLabel}: +$${String.format(Locale.US, "%.0f", selectedItem.incomeAmount)} / -$${String.format(Locale.US, "%.0f", selectedItem.expenseAmount)}",
+                        style = WalletTypography.LabelM,
+                        color = WalletColors.TextPrimary
+                    )
+                } else {
+                    Text(
+                        text = "Daily Net Flow",
+                        style = WalletTypography.LabelM,
                         color = WalletColors.TextMuted
                     )
                 }
 
-                if (index < items.size - 1) {
-                    Spacer(modifier = Modifier.width(8.dp))
+                // Legend
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LegendItem(label = "Income", color = WalletColors.MintChip)
+                    LegendItem(label = "Expense", color = WalletColors.Coral)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Bars Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                items.forEachIndexed { index, item ->
+                    val isSelected = selectedIndex == index
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable {
+                                selectedIndex = if (selectedIndex == index) null else index
+                            },
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            if (item.deltaChipText != null && !isSelected) {
+                                DeltaChip(
+                                    text = item.deltaChipText,
+                                    isPositive = item.isDeltaPositive,
+                                    modifier = Modifier.offset(y = (-2).dp)
+                                )
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .height(110.dp)
+                                .fillMaxWidth(),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            HatchedBar(
+                                heightRatio = item.valueRatio,
+                                isActive = item.isActive || isSelected,
+                                isPositive = item.isPositive,
+                                modifier = Modifier
+                                    .fillMaxWidth(0.75f)
+                                    .fillMaxHeight(),
+                                animationDelayMs = (index * 40).toLong()
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = item.dayLabel,
+                            style = WalletTypography.LabelS,
+                            color = if (isSelected) WalletColors.TextPrimary else WalletColors.TextMuted
+                        )
+                    }
+
+                    if (index < items.size - 1) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LegendItem(label: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = label,
+            style = WalletTypography.LabelS,
+            color = WalletColors.TextMuted
+        )
     }
 }
 
@@ -203,11 +277,11 @@ fun IncomeBarChart(
 @Composable
 private fun IncomeBarChartPreview() {
     val sampleItems = listOf(
-        BarChartItem("Mon", 0.45f, isActive = false, isPositive = true),
-        BarChartItem("Tue", 0.65f, isActive = false, isPositive = false, deltaChipText = "-$45", isDeltaPositive = false),
-        BarChartItem("Wed", 0.85f, isActive = false, isPositive = true),
-        BarChartItem("Thu", 0.70f, isActive = false, isPositive = true),
-        BarChartItem("Fri", 1.0f, isActive = true, isPositive = true, deltaChipText = "+$850", isDeltaPositive = true)
+        BarChartItem("Mon", 0.45f, incomeAmount = 150.0, expenseAmount = 45.0, isActive = false, isPositive = true),
+        BarChartItem("Tue", 0.65f, incomeAmount = 0.0, expenseAmount = 89.0, isActive = false, isPositive = false, deltaChipText = "-$89", isDeltaPositive = false),
+        BarChartItem("Wed", 0.85f, incomeAmount = 450.0, expenseAmount = 20.0, isActive = false, isPositive = true),
+        BarChartItem("Thu", 0.70f, incomeAmount = 200.0, expenseAmount = 50.0, isActive = false, isPositive = true),
+        BarChartItem("Fri", 1.0f, incomeAmount = 850.0, expenseAmount = 30.0, isActive = true, isPositive = true, deltaChipText = "+$820", isDeltaPositive = true)
     )
     IncomeBarChart(items = sampleItems)
 }

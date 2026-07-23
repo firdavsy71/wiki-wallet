@@ -1,5 +1,6 @@
 package com.wiki.wallet
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,17 +12,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WikiWalletTheme
+import com.wiki.wallet.feature.account.AccountDetailRoute
+import com.wiki.wallet.feature.account.AccountDetailViewModel
 import com.wiki.wallet.feature.categories.CategoriesRoute
 import com.wiki.wallet.feature.categories.CategoriesViewModel
 import com.wiki.wallet.feature.dashboard.DashboardRoute
 import com.wiki.wallet.feature.dashboard.DashboardViewModel
 import com.wiki.wallet.feature.history.HistoryRoute
 import com.wiki.wallet.feature.history.HistoryViewModel
+import com.wiki.wallet.feature.onboarding.OnboardingRoute
+import com.wiki.wallet.feature.onboarding.OnboardingViewModel
 import com.wiki.wallet.feature.settings.SettingsRoute
 import com.wiki.wallet.feature.settings.SettingsViewModel
 import com.wiki.wallet.feature.swap.SwapRoute
@@ -33,6 +40,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val appContainer = (application as WikiWalletApplication).container
+        val prefs = getSharedPreferences("apexbudget_prefs", Context.MODE_PRIVATE)
+        val isOnboardingCompleted = prefs.getBoolean("onboarding_completed", false)
+        val startRoute = if (isOnboardingCompleted) "dashboard" else "onboarding"
 
         setContent {
             WikiWalletTheme {
@@ -44,8 +54,22 @@ class MainActivity : ComponentActivity() {
                 ) {
                     NavHost(
                         navController = navController,
-                        startDestination = "dashboard"
+                        startDestination = startRoute
                     ) {
+                        composable("onboarding") {
+                            val viewModel: OnboardingViewModel = viewModel(
+                                factory = appContainer.onboardingViewModelFactory
+                            )
+                            OnboardingRoute(
+                                onComplete = {
+                                    navController.navigate("dashboard") {
+                                        popUpTo("onboarding") { inclusive = true }
+                                    }
+                                },
+                                viewModel = viewModel
+                            )
+                        }
+
                         composable(
                             route = "dashboard",
                             enterTransition = {
@@ -76,6 +100,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToSettings = {
                                     navController.navigate("settings")
+                                },
+                                onNavigateToAccountDetail = { accountId ->
+                                    navController.navigate("account_detail/$accountId")
                                 },
                                 viewModel = viewModel
                             )
@@ -178,6 +205,34 @@ class MainActivity : ComponentActivity() {
                                 factory = appContainer.settingsViewModelFactory
                             )
                             SettingsRoute(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                viewModel = viewModel
+                            )
+                        }
+
+                        composable(
+                            route = "account_detail/{accountId}",
+                            arguments = listOf(navArgument("accountId") { type = NavType.StringType }),
+                            enterTransition = {
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                )
+                            },
+                            exitTransition = {
+                                slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                )
+                            }
+                        ) { backStackEntry ->
+                            val accountId = backStackEntry.arguments?.getString("accountId") ?: ""
+                            val viewModel: AccountDetailViewModel = viewModel(
+                                factory = appContainer.accountDetailViewModelFactory(accountId)
+                            )
+                            AccountDetailRoute(
                                 onNavigateBack = {
                                     navController.popBackStack()
                                 },

@@ -1,0 +1,197 @@
+package com.wiki.wallet.feature.history
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wiki.wallet.core.designsystem.theme.WalletColors
+import com.wiki.wallet.core.designsystem.theme.WalletShapes
+import com.wiki.wallet.core.designsystem.theme.WalletTypography
+import com.wiki.wallet.feature.dashboard.TransactionRowItem
+
+@Composable
+fun HistoryRoute(
+    onNavigateBack: () -> Unit,
+    viewModel: HistoryViewModel,
+    modifier: Modifier = Modifier
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    HistoryScreen(
+        uiState = uiState,
+        onEvent = { event ->
+            if (event is HistoryUiEvent.OnBackClicked) {
+                onNavigateBack()
+            } else {
+                viewModel.onEvent(event)
+            }
+        },
+        modifier = modifier
+    )
+}
+
+@Composable
+fun HistoryScreen(
+    uiState: HistoryUiState,
+    onEvent: (HistoryUiEvent) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(WalletColors.PaperPure)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Top Bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(WalletShapes.Pill)
+                        .background(WalletColors.Paper)
+                        .clickable { onEvent(HistoryUiEvent.OnBackClicked) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = WalletColors.Ink,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Text(
+                    text = "Transaction History",
+                    style = WalletTypography.TitleM,
+                    color = WalletColors.TextPrimary
+                )
+
+                Spacer(modifier = Modifier.width(44.dp))
+            }
+
+            // Filter Chips
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChipItem(
+                    text = "All",
+                    isSelected = uiState.selectedFilter == TransactionFilter.ALL,
+                    onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.ALL)) }
+                )
+                FilterChipItem(
+                    text = "Income",
+                    isSelected = uiState.selectedFilter == TransactionFilter.INCOME,
+                    onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.INCOME)) }
+                )
+                FilterChipItem(
+                    text = "Expense",
+                    isSelected = uiState.selectedFilter == TransactionFilter.EXPENSE,
+                    onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.EXPENSE)) }
+                )
+            }
+
+            // Grouped Transactions Timeline
+            if (uiState.groupedTransactions.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No matching transactions found",
+                        style = WalletTypography.BodyM,
+                        color = WalletColors.TextMuted
+                    )
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(uiState.groupedTransactions) { group ->
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Section Header with Date and Day Subtotal
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = group.dateLabel,
+                                    style = WalletTypography.LabelM,
+                                    color = WalletColors.TextMuted
+                                )
+
+                                val sign = if (group.dayTotalNet >= 0) "+$" else "-$"
+                                Text(
+                                    text = "Day Net: $sign${String.format(java.util.Locale.US, "%.2f", kotlin.math.abs(group.dayTotalNet))}",
+                                    style = WalletTypography.LabelS,
+                                    color = if (group.dayTotalNet >= 0) WalletColors.MintChip else WalletColors.Coral
+                                )
+                            }
+
+                            group.transactions.forEach { tx ->
+                                TransactionRowItem(transaction = tx)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterChipItem(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(WalletShapes.Pill)
+            .background(if (isSelected) WalletColors.Ink else WalletColors.Paper)
+            .clickable { onClick() }
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+    ) {
+        Text(
+            text = text,
+            style = WalletTypography.LabelS,
+            color = if (isSelected) Color.White else WalletColors.TextPrimary
+        )
+    }
+}

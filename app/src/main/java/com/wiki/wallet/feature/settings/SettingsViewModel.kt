@@ -1,12 +1,15 @@
 package com.wiki.wallet.feature.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wiki.wallet.core.util.CurrencyManager
 import com.wiki.wallet.domain.model.Account
 import com.wiki.wallet.domain.repository.AccountRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -23,7 +26,7 @@ data class SettingsUiState(
     val searchQuery: String = "",
     val isCurrencyPickerOpen: Boolean = false,
     val accounts: List<Account> = emptyList(),
-    val appVersion: String = "1.2.0",
+    val appVersion: String = "1.2.1",
     val currencies: List<CurrencyItem> = listOf(
         CurrencyItem("USD", "United States Dollar", "$", "🇺🇸"),
         CurrencyItem("EUR", "Euro", "€", "🇪🇺"),
@@ -72,18 +75,25 @@ sealed interface SettingsUiEvent {
 }
 
 class SettingsViewModel(
+    private val context: Context,
     private val accountRepository: AccountRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
+    private val _uiState = MutableStateFlow(SettingsUiState(selectedCurrency = CurrencyManager.currentCurrencyCode.value))
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
-        accountRepository.observeAllAccounts()
-            .onEach { accounts ->
-                _uiState.update { it.copy(accounts = accounts) }
+        combine(
+            CurrencyManager.currentCurrencyCode,
+            accountRepository.observeAllAccounts()
+        ) { currencyCode, accounts ->
+            _uiState.update {
+                it.copy(
+                    selectedCurrency = currencyCode,
+                    accounts = accounts
+                )
             }
-            .launchIn(viewModelScope)
+        }.launchIn(viewModelScope)
     }
 
     fun onEvent(event: SettingsUiEvent) {
@@ -92,6 +102,7 @@ class SettingsViewModel(
                 _uiState.update { it.copy(searchQuery = event.query) }
             }
             is SettingsUiEvent.OnCurrencySelected -> {
+                CurrencyManager.setCurrency(context, event.currencyCode)
                 _uiState.update {
                     it.copy(
                         selectedCurrency = event.currencyCode,

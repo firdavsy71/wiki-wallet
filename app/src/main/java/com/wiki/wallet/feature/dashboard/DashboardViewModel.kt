@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wiki.wallet.core.designsystem.components.BarChartItem
 import com.wiki.wallet.core.database.entity.TransactionType
+import com.wiki.wallet.core.util.CurrencyManager
 import com.wiki.wallet.domain.model.Account
 import com.wiki.wallet.domain.model.TimePeriod
 import com.wiki.wallet.domain.model.Transaction
@@ -15,11 +16,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 
 data class DashboardUiState(
-    val userName: String = "Wiki",
+    val userName: String = "Apex User",
+    val currencySymbol: String = "$",
     val netBalanceText: String = "$0.00",
     val periodIncomeText: String = "$0.00",
     val periodExpenseText: String = "$0.00",
@@ -34,7 +35,7 @@ data class DashboardUiState(
 sealed interface DashboardUiEvent {
     data class OnPeriodSelected(val period: TimePeriod) : DashboardUiEvent
     data class OnAccountClick(val accountId: String) : DashboardUiEvent
-    data class OnTransactionClick(val transaction: Transaction) : DashboardUiEvent
+    data class OnTransactionClick(val transactionId: String) : DashboardUiEvent
     data object OnNavigateToAddTransaction : DashboardUiEvent
     data object OnNavigateToHistory : DashboardUiEvent
     data object OnNavigateToCategories : DashboardUiEvent
@@ -54,8 +55,9 @@ class DashboardViewModel(
     init {
         combine(
             _selectedPeriod.flatMapLatest { period -> getDashboardSummaryUseCase(period) },
-            accountRepository.observeAllAccounts()
-        ) { summary, accounts ->
+            accountRepository.observeAllAccounts(),
+            CurrencyManager.currentCurrencySymbol
+        ) { summary, accounts, symbol ->
             val chartBarItems = summary.chartItems.mapIndexed { idx, item ->
                 BarChartItem(
                     dayLabel = item.dayLabel,
@@ -66,7 +68,7 @@ class DashboardViewModel(
                     isPositive = item.isNetPositive,
                     deltaChipText = if (item.netAmount != 0.0) {
                         val sign = if (item.netAmount > 0) "+" else "−"
-                        "$sign$${String.format(java.util.Locale.US, "%.0f", kotlin.math.abs(item.netAmount))}"
+                        "$sign${CurrencyManager.format(kotlin.math.abs(item.netAmount), symbol)}"
                     } else null,
                     isDeltaPositive = item.isNetPositive
                 )
@@ -74,9 +76,10 @@ class DashboardViewModel(
 
             _uiState.update { state ->
                 state.copy(
-                    netBalanceText = formatCurrency(summary.netBalance),
-                    periodIncomeText = formatCurrency(summary.periodIncome),
-                    periodExpenseText = formatCurrency(summary.periodExpense),
+                    currencySymbol = symbol,
+                    netBalanceText = CurrencyManager.format(summary.netBalance, symbol),
+                    periodIncomeText = CurrencyManager.format(summary.periodIncome, symbol),
+                    periodExpenseText = CurrencyManager.format(summary.periodExpense, symbol),
                     savingsRateText = String.format(java.util.Locale.US, "%.1f%%", summary.savingsRatePercent),
                     selectedPeriod = summary.selectedPeriod,
                     chartItems = chartBarItems,
@@ -94,11 +97,5 @@ class DashboardViewModel(
             }
             else -> {}
         }
-    }
-
-    private fun formatCurrency(amount: Double): String {
-        val sign = if (amount < 0) "−$" else "$"
-        val absAmount = kotlin.math.abs(amount)
-        return "$sign${String.format(java.util.Locale.US, "%,.2f", absAmount)}"
     }
 }

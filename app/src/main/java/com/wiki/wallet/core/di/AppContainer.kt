@@ -89,13 +89,15 @@ class AppContainer(private val context: Context) {
         }
     }
 
-    val swapViewModelFactory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+    fun swapViewModelFactory(transactionId: String? = null): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return SwapViewModel(
+                transactionId = transactionId,
                 addTransactionUseCase = addTransactionUseCase,
                 getCategoriesUseCase = getCategoriesUseCase,
-                accountRepository = accountRepository
+                accountRepository = accountRepository,
+                transactionRepository = transactionRepository
             ) as T
         }
     }
@@ -122,6 +124,7 @@ class AppContainer(private val context: Context) {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return SettingsViewModel(
+                context = context,
                 accountRepository = accountRepository
             ) as T
         }

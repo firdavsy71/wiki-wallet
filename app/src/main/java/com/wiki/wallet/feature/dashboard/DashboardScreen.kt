@@ -44,6 +44,7 @@ import com.wiki.wallet.core.designsystem.components.SuperscriptAmount
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
+import com.wiki.wallet.core.util.CurrencyManager
 import com.wiki.wallet.domain.model.Account
 import com.wiki.wallet.domain.model.TimePeriod
 import com.wiki.wallet.domain.model.Transaction
@@ -58,6 +59,7 @@ fun DashboardRoute(
     onNavigateToCategories: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToAccountDetail: (String) -> Unit,
+    onNavigateToEditTransaction: (String) -> Unit,
     viewModel: DashboardViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -72,6 +74,7 @@ fun DashboardRoute(
                 DashboardUiEvent.OnNavigateToCategories -> onNavigateToCategories()
                 DashboardUiEvent.OnNavigateToSettings -> onNavigateToSettings()
                 is DashboardUiEvent.OnAccountClick -> onNavigateToAccountDetail(event.accountId)
+                is DashboardUiEvent.OnTransactionClick -> onNavigateToEditTransaction(event.transactionId)
                 else -> viewModel.onEvent(event)
             }
         },
@@ -106,7 +109,7 @@ fun DashboardScreen(
             ) {
                 Column {
                     Text(
-                        text = "Hello, ${uiState.userName}! 👋",
+                        text = "ApexBudget 👋",
                         style = WalletTypography.DisplayL,
                         color = WalletColors.TextPrimary
                     )
@@ -118,7 +121,6 @@ fun DashboardScreen(
                     )
                 }
 
-                // Action icons: Categories, History, Settings
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     HeaderIconButton(
                         icon = Icons.Default.Category,
@@ -160,7 +162,6 @@ fun DashboardScreen(
                             color = WalletColors.TextOnDark
                         )
 
-                        // Weekly / Monthly Toggle Chips
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier
@@ -227,7 +228,7 @@ fun DashboardScreen(
                 cardHeight = 220.dp
             )
 
-            // Income / Expense / Savings Stat Row
+            // Income / Expense Stat Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -285,15 +286,17 @@ fun DashboardScreen(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     uiState.recentTransactions.forEach { tx ->
-                        TransactionRowItem(transaction = tx)
+                        TransactionRowItem(
+                            transaction = tx,
+                            onClick = { onEvent(DashboardUiEvent.OnTransactionClick(tx.id)) }
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(60.dp)) // Clearance for FAB
+            Spacer(modifier = Modifier.height(60.dp))
         }
 
-        // Floating Action Button to Add Transaction
         FloatingActionButton(
             onClick = { onEvent(DashboardUiEvent.OnNavigateToAddTransaction) },
             containerColor = WalletColors.Coral,
@@ -380,7 +383,7 @@ private fun AccountBalanceCard(
             )
 
             Text(
-                text = "$${String.format(Locale.US, "%,.2f", account.currentBalance)}",
+                text = CurrencyManager.format(account.currentBalance),
                 style = WalletTypography.TitleM,
                 color = WalletColors.TextPrimary
             )
@@ -450,11 +453,12 @@ private fun StatCard(
 @Composable
 fun TransactionRowItem(
     transaction: Transaction,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isIncome = transaction.type == TransactionType.INCOME
     val amountColor = if (isIncome) WalletColors.MintChip else WalletColors.Coral
-    val amountPrefix = if (isIncome) "+$" else "-$"
+    val amountSign = if (isIncome) "+" else "−"
 
     val dateFormat = SimpleDateFormat("MMM d, HH:mm", Locale.getDefault())
     val dateText = dateFormat.format(Date(transaction.date))
@@ -465,6 +469,7 @@ fun TransactionRowItem(
             .clip(WalletShapes.CardMedium)
             .background(WalletColors.PaperPure)
             .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .padding(14.dp)
     ) {
         Row(
@@ -509,7 +514,7 @@ fun TransactionRowItem(
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "$amountPrefix${String.format(Locale.US, "%.2f", transaction.amount)}",
+                    text = "$amountSign${CurrencyManager.format(transaction.amount)}",
                     style = WalletTypography.TitleM,
                     color = amountColor
                 )
@@ -522,13 +527,4 @@ fun TransactionRowItem(
             }
         }
     }
-}
-
-@Preview
-@Composable
-private fun DashboardScreenPreview() {
-    DashboardScreen(
-        uiState = DashboardUiState(),
-        onEvent = {}
-    )
 }

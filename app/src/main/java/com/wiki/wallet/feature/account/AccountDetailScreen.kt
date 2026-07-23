@@ -34,12 +34,13 @@ import com.wiki.wallet.core.designsystem.components.SuperscriptAmount
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
+import com.wiki.wallet.core.util.CurrencyManager
 import com.wiki.wallet.feature.dashboard.TransactionRowItem
-import java.util.Locale
 
 @Composable
 fun AccountDetailRoute(
     onNavigateBack: () -> Unit,
+    onNavigateToEditTransaction: (String) -> Unit,
     viewModel: AccountDetailViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -54,6 +55,7 @@ fun AccountDetailRoute(
                 viewModel.onEvent(event)
             }
         },
+        onTransactionClick = onNavigateToEditTransaction,
         modifier = modifier
     )
 }
@@ -62,6 +64,7 @@ fun AccountDetailRoute(
 fun AccountDetailScreen(
     uiState: AccountDetailUiState,
     onEvent: (AccountDetailUiEvent) -> Unit,
+    onTransactionClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val account = uiState.account
@@ -144,7 +147,7 @@ fun AccountDetailScreen(
                         Text(text = "Available Balance", style = WalletTypography.LabelM, color = WalletColors.TextMuted)
 
                         SuperscriptAmount(
-                            amountText = "$${String.format(Locale.US, "%,.2f", account.currentBalance)}",
+                            amountText = CurrencyManager.format(account.currentBalance),
                             style = WalletTypography.DisplayXL,
                             color = WalletColors.TextOnDark
                         )
@@ -155,12 +158,12 @@ fun AccountDetailScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Total Income: +$${String.format(Locale.US, "%,.2f", uiState.totalIncome)}",
+                                text = "Total Income: +${CurrencyManager.format(uiState.totalIncome)}",
                                 style = WalletTypography.LabelS,
                                 color = WalletColors.MintChip
                             )
                             Text(
-                                text = "Total Spent: -$${String.format(Locale.US, "%,.2f", uiState.totalExpense)}",
+                                text = "Total Spent: -${CurrencyManager.format(uiState.totalExpense)}",
                                 style = WalletTypography.LabelS,
                                 color = WalletColors.Coral
                             )
@@ -194,7 +197,10 @@ fun AccountDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(uiState.transactions) { tx ->
-                        TransactionRowItem(transaction = tx)
+                        TransactionRowItem(
+                            transaction = tx,
+                            onClick = { onTransactionClick(tx.id) }
+                        )
                     }
                 }
             }

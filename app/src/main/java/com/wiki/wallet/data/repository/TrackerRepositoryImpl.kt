@@ -87,6 +87,29 @@ class TransactionRepositoryImpl(
         transactionDao.insertTransaction(entity)
     }
 
+    override suspend fun updateTransaction(
+        id: String,
+        amount: Double,
+        type: TransactionType,
+        categoryId: String,
+        accountId: String,
+        note: String?,
+        dateMillis: Long,
+        createdAt: Long
+    ) {
+        val entity = TransactionEntity(
+            id = id,
+            amount = amount,
+            type = type,
+            categoryId = categoryId,
+            accountId = accountId,
+            note = note,
+            date = dateMillis,
+            createdAt = createdAt
+        )
+        transactionDao.insertTransaction(entity)
+    }
+
     override suspend fun deleteTransaction(transaction: Transaction) {
         val entity = TransactionEntity(
             id = transaction.id,

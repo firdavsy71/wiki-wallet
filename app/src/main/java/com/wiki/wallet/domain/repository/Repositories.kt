@@ -17,6 +17,16 @@ interface TransactionRepository {
         note: String?,
         dateMillis: Long
     )
+    suspend fun updateTransaction(
+        id: String,
+        amount: Double,
+        type: TransactionType,
+        categoryId: String,
+        accountId: String,
+        note: String?,
+        dateMillis: Long,
+        createdAt: Long
+    )
     suspend fun deleteTransaction(transaction: Transaction)
 }
 

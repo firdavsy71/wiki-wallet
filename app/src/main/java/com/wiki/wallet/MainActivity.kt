@@ -104,6 +104,9 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToAccountDetail = { accountId ->
                                     navController.navigate("account_detail/$accountId")
                                 },
+                                onNavigateToEditTransaction = { transactionId ->
+                                    navController.navigate("edit_transaction/$transactionId")
+                                },
                                 viewModel = viewModel
                             )
                         }
@@ -124,7 +127,35 @@ class MainActivity : ComponentActivity() {
                             }
                         ) {
                             val viewModel: SwapViewModel = viewModel(
-                                factory = appContainer.swapViewModelFactory
+                                factory = appContainer.swapViewModelFactory(null)
+                            )
+                            SwapRoute(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                viewModel = viewModel
+                            )
+                        }
+
+                        composable(
+                            route = "edit_transaction/{transactionId}",
+                            arguments = listOf(navArgument("transactionId") { type = NavType.StringType }),
+                            enterTransition = {
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Up,
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                )
+                            },
+                            exitTransition = {
+                                slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                )
+                            }
+                        ) { backStackEntry ->
+                            val transactionId = backStackEntry.arguments?.getString("transactionId")
+                            val viewModel: SwapViewModel = viewModel(
+                                factory = appContainer.swapViewModelFactory(transactionId)
                             )
                             SwapRoute(
                                 onNavigateBack = {
@@ -155,6 +186,9 @@ class MainActivity : ComponentActivity() {
                             HistoryRoute(
                                 onNavigateBack = {
                                     navController.popBackStack()
+                                },
+                                onNavigateToEditTransaction = { transactionId ->
+                                    navController.navigate("edit_transaction/$transactionId")
                                 },
                                 viewModel = viewModel
                             )
@@ -235,6 +269,9 @@ class MainActivity : ComponentActivity() {
                             AccountDetailRoute(
                                 onNavigateBack = {
                                     navController.popBackStack()
+                                },
+                                onNavigateToEditTransaction = { transactionId ->
+                                    navController.navigate("edit_transaction/$transactionId")
                                 },
                                 viewModel = viewModel
                             )

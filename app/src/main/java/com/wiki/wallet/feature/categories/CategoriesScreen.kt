@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -31,15 +32,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wiki.wallet.core.database.entity.TransactionType
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
+import com.wiki.wallet.core.util.CurrencyManager
 import com.wiki.wallet.domain.model.Category
-import java.util.Locale
 
 @Composable
 fun CategoriesRoute(
@@ -79,9 +79,9 @@ fun CategoriesScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Top Bar
+            // Top Bar Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -104,7 +104,7 @@ fun CategoriesScreen(
                 }
 
                 Text(
-                    text = "Categories & Budgets",
+                    text = "Category Budgets",
                     style = WalletTypography.TitleM,
                     color = WalletColors.TextPrimary
                 )
@@ -112,7 +112,7 @@ fun CategoriesScreen(
                 Spacer(modifier = Modifier.width(44.dp))
             }
 
-            // Categories Grid (2 Columns)
+            // Grid of Categories
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -126,64 +126,94 @@ fun CategoriesScreen(
                 }
             }
         }
+    }
 
-        // Category Detail Bottom Sheet
-        if (uiState.isDetailBottomSheetOpen && uiState.selectedCategory != null) {
-            val category = uiState.selectedCategory
-            ModalBottomSheet(
-                onDismissRequest = { onEvent(CategoriesUiEvent.OnDismissDetail) },
-                sheetState = rememberModalBottomSheetState(),
-                containerColor = WalletColors.PaperPure
+    // Modal Bottom Sheet for Category Budget Detail
+    if (uiState.isDetailBottomSheetOpen && uiState.selectedCategory != null) {
+        val category = uiState.selectedCategory
+        val isIncome = category.type == TransactionType.INCOME
+
+        ModalBottomSheet(
+            onDismissRequest = { onEvent(CategoriesUiEvent.OnDismissDetail) },
+            sheetState = rememberModalBottomSheetState(),
+            containerColor = WalletColors.PaperPure
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isIncome) WalletColors.MintChip.copy(alpha = 0.15f)
+                                else WalletColors.Coral.copy(alpha = 0.15f)
+                            ),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(text = category.iconKey, style = WalletTypography.DisplayL)
-                        Column {
-                            Text(text = category.name, style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
-                            Text(text = category.type.name, style = WalletTypography.LabelS, color = WalletColors.TextMuted)
-                        }
                     }
 
-                    category.monthlyBudget?.let { budget ->
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column {
+                        Text(text = category.name, style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                        Text(
+                            text = if (isIncome) "Income Category" else "Expense Category",
+                            style = WalletTypography.BodyM,
+                            color = WalletColors.TextMuted
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(WalletShapes.CardMedium)
+                        .background(WalletColors.Paper)
+                        .padding(16.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(text = "Spent this month", style = WalletTypography.BodyM, color = WalletColors.TextMuted)
+                            Text(
+                                text = CurrencyManager.format(category.currentPeriodSpent),
+                                style = WalletTypography.TitleM,
+                                color = if (isIncome) WalletColors.MintChip else WalletColors.Coral
+                            )
+                        }
+
+                        if (!isIncome && category.monthlyBudget != null) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(text = "Monthly Budget", style = WalletTypography.LabelM, color = WalletColors.TextMuted)
+                                Text(text = "Monthly Budget", style = WalletTypography.BodyM, color = WalletColors.TextMuted)
                                 Text(
-                                    text = "$${String.format(Locale.US, "%.2f", category.currentPeriodSpent)} / $${String.format(Locale.US, "%.2f", budget)}",
-                                    style = WalletTypography.LabelM,
+                                    text = CurrencyManager.format(category.monthlyBudget),
+                                    style = WalletTypography.TitleM,
                                     color = WalletColors.TextPrimary
                                 )
                             }
 
-                            // Progress Track
-                            Box(
+                            val ratio = (category.currentPeriodSpent / category.monthlyBudget).coerceIn(0.0, 1.0).toFloat()
+                            LinearProgressIndicator(
+                                progress = { ratio },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(8.dp)
-                                    .clip(WalletShapes.Pill)
-                                    .background(WalletColors.Paper)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize(category.budgetProgressRatio)
-                                        .clip(WalletShapes.Pill)
-                                        .background(
-                                            if (category.budgetProgressRatio >= 1.0f) WalletColors.Coral
-                                            else WalletColors.MintChip
-                                        )
-                                )
-                            }
+                                    .clip(WalletShapes.Pill),
+                                color = if (ratio > 0.9f) WalletColors.Coral else WalletColors.MintChip,
+                                trackColor = WalletColors.CardBorder
+                            )
                         }
                     }
                 }
@@ -195,14 +225,13 @@ fun CategoriesScreen(
 @Composable
 private fun CategoryCardItem(
     category: Category,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onClick: () -> Unit
 ) {
-    val isExpense = category.type == TransactionType.EXPENSE
-    val accentColor = if (isExpense) WalletColors.Coral else WalletColors.MintChip
+    val isIncome = category.type == TransactionType.INCOME
+    val accentColor = if (isIncome) WalletColors.MintChip else WalletColors.Coral
 
     Box(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .clip(WalletShapes.CardMedium)
             .background(WalletColors.Paper)
@@ -210,9 +239,7 @@ private fun CategoryCardItem(
             .clickable { onClick() }
             .padding(14.dp)
     ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -220,7 +247,7 @@ private fun CategoryCardItem(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
                         .background(accentColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
@@ -232,10 +259,10 @@ private fun CategoryCardItem(
                     modifier = Modifier
                         .clip(WalletShapes.Pill)
                         .background(accentColor.copy(alpha = 0.15f))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = if (isExpense) "Expense" else "Income",
+                        text = if (isIncome) "IN" else "OUT",
                         style = WalletTypography.LabelS,
                         color = accentColor
                     )
@@ -245,37 +272,15 @@ private fun CategoryCardItem(
             Text(
                 text = category.name,
                 style = WalletTypography.TitleM,
-                color = WalletColors.TextPrimary
+                color = WalletColors.TextPrimary,
+                maxLines = 1
             )
 
-            // Budget Progress Bar if budget is set
-            category.monthlyBudget?.let { budget ->
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = "Spent $${String.format(Locale.US, "%.0f", category.currentPeriodSpent)} / $${String.format(Locale.US, "%.0f", budget)}",
-                        style = WalletTypography.LabelS,
-                        color = WalletColors.TextMuted
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(WalletShapes.Pill)
-                            .background(WalletColors.Canvas.copy(alpha = 0.3f))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize(category.budgetProgressRatio)
-                                .clip(WalletShapes.Pill)
-                                .background(
-                                    if (category.budgetProgressRatio >= 1.0f) WalletColors.Coral
-                                    else WalletColors.MintChip
-                                )
-                        )
-                    }
-                }
-            }
+            Text(
+                text = CurrencyManager.format(category.currentPeriodSpent),
+                style = WalletTypography.LabelM,
+                color = accentColor
+            )
         }
     }
 }

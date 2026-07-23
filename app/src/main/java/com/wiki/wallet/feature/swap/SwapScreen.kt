@@ -2,6 +2,7 @@ package com.wiki.wallet.feature.swap
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,12 +19,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
@@ -37,20 +39,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wiki.wallet.core.database.entity.TransactionType
-import com.wiki.wallet.core.designsystem.components.DeltaChip
 import com.wiki.wallet.core.designsystem.components.PillButton
 import com.wiki.wallet.core.designsystem.components.PillButtonVariant
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
+import com.wiki.wallet.domain.model.Account
+import com.wiki.wallet.domain.model.Category
 
 @Composable
 fun SwapRoute(
@@ -60,14 +59,16 @@ fun SwapRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val haptic = LocalHapticFeedback.current
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(viewModel.effect) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 SwapUiEffect.SaveSuccess -> {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    Toast.makeText(context, "Transaction saved! 🎉", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, if (uiState.isEditMode) "Transaction updated!" else "Transaction saved!", Toast.LENGTH_SHORT).show()
+                    onNavigateBack()
+                }
+                SwapUiEffect.DeleteSuccess -> {
+                    Toast.makeText(context, "Transaction deleted!", Toast.LENGTH_SHORT).show()
                     onNavigateBack()
                 }
                 is SwapUiEffect.Error -> {
@@ -100,12 +101,10 @@ fun SwapScreen(
     onEvent: (SwapUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val accentColor = if (uiState.type == TransactionType.INCOME) WalletColors.MintChip else WalletColors.Coral
-
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(WalletColors.Ink)
+            .background(WalletColors.PaperPure)
     ) {
         Column(
             modifier = Modifier
@@ -113,9 +112,9 @@ fun SwapScreen(
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Top Bar Row
+            // Top Navigation Bar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -125,7 +124,7 @@ fun SwapScreen(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(WalletShapes.Pill)
-                        .background(Color.White)
+                        .background(WalletColors.Paper)
                         .clickable { onEvent(SwapUiEvent.OnBackClicked) },
                     contentAlignment = Alignment.Center
                 ) {
@@ -138,97 +137,187 @@ fun SwapScreen(
                 }
 
                 Text(
-                    text = "Add Transaction",
+                    text = if (uiState.isEditMode) "Edit Transaction" else "Add Transaction",
                     style = WalletTypography.TitleM,
-                    color = WalletColors.TextOnDark
+                    color = WalletColors.TextPrimary
                 )
 
                 Spacer(modifier = Modifier.width(44.dp))
             }
 
-            Spacer(modifier = Modifier.height(2.dp))
-
-            // Income / Expense Segmented Control
+            // Income / Expense Toggle Segment
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(WalletShapes.Pill)
-                    .background(WalletColors.InkElevated)
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    .background(WalletColors.Paper)
+                    .padding(4.dp)
             ) {
                 TypeSegmentButton(
-                    text = "Expense",
+                    text = "Expense (−)",
                     isSelected = uiState.type == TransactionType.EXPENSE,
-                    activeColor = WalletColors.Coral,
+                    selectedColor = WalletColors.Coral,
                     onClick = { onEvent(SwapUiEvent.OnTypeChanged(TransactionType.EXPENSE)) },
                     modifier = Modifier.weight(1f)
                 )
+
                 TypeSegmentButton(
-                    text = "Income",
+                    text = "Income (+)",
                     isSelected = uiState.type == TransactionType.INCOME,
-                    activeColor = WalletColors.MintChip,
+                    selectedColor = WalletColors.MintChip,
                     onClick = { onEvent(SwapUiEvent.OnTypeChanged(TransactionType.INCOME)) },
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            // Account Selection Chips
-            Text(
-                text = "Select Account",
-                style = WalletTypography.LabelS,
-                color = WalletColors.TextMuted
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Amount Input Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(WalletShapes.CardLarge)
+                    .background(WalletColors.Ink)
+                    .padding(20.dp)
             ) {
-                uiState.accounts.forEach { account ->
-                    val isSelected = account.id == uiState.selectedAccount?.id
-                    Box(
-                        modifier = Modifier
-                            .clip(WalletShapes.Pill)
-                            .background(if (isSelected) WalletColors.Paper else WalletColors.InkElevated)
-                            .clickable { onEvent(SwapUiEvent.OnAccountSelected(account)) }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Amount",
+                        style = WalletTypography.BodyM,
+                        color = WalletColors.TextMuted
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "${account.iconKey} ${account.name}",
-                            style = WalletTypography.LabelS,
-                            color = if (isSelected) WalletColors.Ink else WalletColors.TextOnDark
+                            text = if (uiState.type == TransactionType.INCOME) "+$" else "-$",
+                            style = WalletTypography.DisplayXL,
+                            color = if (uiState.type == TransactionType.INCOME) WalletColors.MintChip else WalletColors.Coral
+                        )
+
+                        BasicTextField(
+                            value = uiState.amountText,
+                            onValueChange = { onEvent(SwapUiEvent.OnAmountChanged(it)) },
+                            textStyle = WalletTypography.DisplayXL.copy(
+                                color = WalletColors.TextOnDark
+                            ),
+                            singleLine = true,
+                            cursorBrush = SolidColor(WalletColors.Coral),
+                            decorationBox = { innerTextField ->
+                                Box {
+                                    if (uiState.amountText.isEmpty()) {
+                                        Text(
+                                            text = "0.00",
+                                            style = WalletTypography.DisplayXL,
+                                            color = WalletColors.TextMutedDark
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
                         )
                     }
                 }
             }
 
-            // Amount Input Card (Top Card)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(WalletShapes.CardLarge)
-                    .background(WalletColors.Paper)
-                    .padding(20.dp)
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = if (uiState.type == TransactionType.EXPENSE) "Spent Amount ($)" else "Received Amount ($)",
-                        style = WalletTypography.LabelM,
-                        color = WalletColors.TextMuted
-                    )
+            // Category Selector Card
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "Category",
+                    style = WalletTypography.LabelM,
+                    color = WalletColors.TextMuted
+                )
 
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(WalletShapes.CardMedium)
+                        .background(WalletColors.Paper)
+                        .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                        .clickable { onEvent(SwapUiEvent.OnCategoryPickerToggle(true)) }
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = uiState.selectedCategory?.iconKey ?: "📁",
+                                style = WalletTypography.TitleM
+                            )
+                            Text(
+                                text = uiState.selectedCategory?.name ?: "Select Category",
+                                style = WalletTypography.TitleM,
+                                color = WalletColors.TextPrimary
+                            )
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Select Category",
+                            tint = WalletColors.Ink,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+
+            // Account Selection Chips
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "Account",
+                    style = WalletTypography.LabelM,
+                    color = WalletColors.TextMuted
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    uiState.accounts.forEach { account ->
+                        val isSelected = account.id == uiState.selectedAccount?.id
+                        AccountChip(
+                            account = account,
+                            isSelected = isSelected,
+                            onClick = { onEvent(SwapUiEvent.OnAccountSelected(account)) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            // Optional Note Input
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "Note (Optional)",
+                    style = WalletTypography.LabelM,
+                    color = WalletColors.TextMuted
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(WalletShapes.CardMedium)
+                        .background(WalletColors.Paper)
+                        .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                        .padding(14.dp)
+                ) {
                     BasicTextField(
-                        value = uiState.amountText,
-                        onValueChange = { onEvent(SwapUiEvent.OnAmountChanged(it)) },
-                        textStyle = WalletTypography.DisplayL.copy(color = accentColor),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        cursorBrush = SolidColor(accentColor),
+                        value = uiState.noteText,
+                        onValueChange = { onEvent(SwapUiEvent.OnNoteChanged(it)) },
+                        textStyle = WalletTypography.BodyM.copy(color = WalletColors.TextPrimary),
                         singleLine = true,
+                        cursorBrush = SolidColor(WalletColors.Coral),
                         decorationBox = { innerTextField ->
                             Box {
-                                if (uiState.amountText.isEmpty()) {
+                                if (uiState.noteText.isEmpty()) {
                                     Text(
-                                        text = "0.00",
-                                        style = WalletTypography.DisplayL,
+                                        text = "Add note or description...",
+                                        style = WalletTypography.BodyM,
                                         color = WalletColors.TextMuted
                                     )
                                 }
@@ -239,91 +328,49 @@ fun SwapScreen(
                 }
             }
 
-            // Category Selector Card (Bottom Card)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(WalletShapes.CardLarge)
-                    .background(accentColor)
-                    .clickable { onEvent(SwapUiEvent.OnCategoryPickerToggle(true)) }
-                    .padding(20.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = "Category",
-                            style = WalletTypography.LabelM,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = uiState.selectedCategory?.let { "${it.iconKey} ${it.name}" } ?: "Select Category",
-                                style = WalletTypography.TitleM,
-                                color = Color.White
-                            )
-                            Icon(
-                                imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = "Dropdown",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
+            Spacer(modifier = Modifier.height(10.dp))
 
-                    if (uiState.selectedCategory?.monthlyBudget != null) {
-                        DeltaChip(
-                            text = "Budget $${String.format(java.util.Locale.US, "%.0f", uiState.selectedCategory.monthlyBudget)}",
-                            isPositive = true,
-                            backgroundColor = Color.White.copy(alpha = 0.2f),
-                            textColor = Color.White
+            // Primary Save / Log Button
+            PillButton(
+                text = if (uiState.isExecuting) "Saving..."
+                else if (uiState.isEditMode) "Save Changes"
+                else "Log Transaction",
+                onClick = { onEvent(SwapUiEvent.OnSaveClicked) },
+                enabled = uiState.isCtaEnabled && !uiState.isExecuting,
+                variant = PillButtonVariant.Primary,
+                height = 56.dp,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Delete Button (only present in edit mode)
+            if (uiState.isEditMode) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(WalletShapes.Pill)
+                        .background(WalletColors.Coral.copy(alpha = 0.12f))
+                        .clickable { onEvent(SwapUiEvent.OnDeleteClicked) }
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = WalletColors.Coral,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "Delete Transaction",
+                            style = WalletTypography.TitleM,
+                            color = WalletColors.Coral
                         )
                     }
                 }
             }
-
-            // Note Input (Optional)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(WalletShapes.CardMedium)
-                    .background(WalletColors.InkElevated)
-                    .padding(14.dp)
-            ) {
-                BasicTextField(
-                    value = uiState.noteText,
-                    onValueChange = { onEvent(SwapUiEvent.OnNoteChanged(it)) },
-                    textStyle = WalletTypography.BodyM.copy(color = WalletColors.TextOnDark),
-                    singleLine = true,
-                    decorationBox = { innerTextField ->
-                        Box {
-                            if (uiState.noteText.isEmpty()) {
-                                Text(
-                                    text = "Add note (optional e.g. Lunch at Cafe)...",
-                                    style = WalletTypography.BodyM,
-                                    color = WalletColors.TextMuted
-                                )
-                            }
-                            innerTextField()
-                        }
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Save CTA Button
-            PillButton(
-                text = if (uiState.isExecuting) "Saving..." else "Save Transaction",
-                onClick = { onEvent(SwapUiEvent.OnSaveClicked) },
-                variant = PillButtonVariant.Primary,
-                enabled = uiState.isCtaEnabled && !uiState.isExecuting,
-                height = 56.dp,
-                modifier = Modifier.fillMaxWidth()
-            )
         }
     }
 
@@ -346,48 +393,36 @@ fun SwapScreen(
                     color = WalletColors.TextPrimary
                 )
 
-                val filteredCategories = uiState.categories.filter { it.type == uiState.type }
+                val availableCats = uiState.categories.filter { it.type == uiState.type }
 
                 LazyColumn(
                     modifier = Modifier.height(300.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(filteredCategories) { category ->
+                    items(availableCats) { category ->
+                        val isSelected = category.id == uiState.selectedCategory?.id
+
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(WalletShapes.CardMedium)
-                                .background(WalletColors.Paper)
+                                .background(if (isSelected) WalletColors.Ink else WalletColors.Paper)
                                 .clickable { onEvent(SwapUiEvent.OnCategorySelected(category)) }
                                 .padding(14.dp)
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Text(
-                                        text = category.iconKey,
-                                        style = WalletTypography.TitleM
-                                    )
-                                    Text(
-                                        text = category.name,
-                                        style = WalletTypography.TitleM,
-                                        color = WalletColors.TextPrimary
-                                    )
-                                }
-
-                                category.monthlyBudget?.let { budget ->
-                                    Text(
-                                        text = "Budget: $${String.format(java.util.Locale.US, "%.0f", budget)}",
-                                        style = WalletTypography.LabelS,
-                                        color = WalletColors.TextMuted
-                                    )
-                                }
+                                Text(
+                                    text = category.iconKey,
+                                    style = WalletTypography.TitleM
+                                )
+                                Text(
+                                    text = category.name,
+                                    style = WalletTypography.TitleM,
+                                    color = if (isSelected) WalletColors.TextOnDark else WalletColors.TextPrimary
+                                )
                             }
                         }
                     }
@@ -401,31 +436,57 @@ fun SwapScreen(
 private fun TypeSegmentButton(
     text: String,
     isSelected: Boolean,
-    activeColor: Color,
+    selectedColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .clip(WalletShapes.Pill)
-            .background(if (isSelected) activeColor else Color.Transparent)
+            .background(if (isSelected) selectedColor else Color.Transparent)
             .clickable { onClick() }
-            .padding(vertical = 8.dp),
+            .padding(vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            style = WalletTypography.LabelM,
+            style = WalletTypography.TitleM,
             color = if (isSelected) Color.White else WalletColors.TextMuted
         )
     }
 }
 
-@Preview
 @Composable
-private fun SwapScreenPreview() {
-    SwapScreen(
-        uiState = SwapUiState(),
-        onEvent = {}
-    )
+private fun AccountChip(
+    account: Account,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(WalletShapes.CardMedium)
+            .background(if (isSelected) WalletColors.Ink else WalletColors.Paper)
+            .border(
+                width = 1.dp,
+                color = if (isSelected) WalletColors.Ink else WalletColors.CardBorder,
+                shape = WalletShapes.CardMedium
+            )
+            .clickable { onClick() }
+            .padding(12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(text = account.iconKey, style = WalletTypography.BodyM)
+            Text(
+                text = account.name,
+                style = WalletTypography.LabelM,
+                color = if (isSelected) WalletColors.TextOnDark else WalletColors.TextPrimary,
+                maxLines = 1
+            )
+        }
+    }
 }

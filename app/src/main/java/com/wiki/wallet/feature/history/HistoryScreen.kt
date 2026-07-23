@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
@@ -26,17 +26,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
+import com.wiki.wallet.core.util.CurrencyManager
 import com.wiki.wallet.feature.dashboard.TransactionRowItem
 
 @Composable
 fun HistoryRoute(
     onNavigateBack: () -> Unit,
+    onNavigateToEditTransaction: (String) -> Unit,
     viewModel: HistoryViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -51,6 +52,7 @@ fun HistoryRoute(
                 viewModel.onEvent(event)
             }
         },
+        onTransactionClick = onNavigateToEditTransaction,
         modifier = modifier
     )
 }
@@ -59,6 +61,7 @@ fun HistoryRoute(
 fun HistoryScreen(
     uiState: HistoryUiState,
     onEvent: (HistoryUiEvent) -> Unit,
+    onTransactionClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -104,29 +107,33 @@ fun HistoryScreen(
                 Spacer(modifier = Modifier.width(44.dp))
             }
 
-            // Filter Chips
-            Row(
-                modifier = Modifier.fillMaxWidth(),
+            // Filter Chips (All, Income, Expense)
+            LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FilterChipItem(
-                    text = "All",
-                    isSelected = uiState.selectedFilter == TransactionFilter.ALL,
-                    onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.ALL)) }
-                )
-                FilterChipItem(
-                    text = "Income",
-                    isSelected = uiState.selectedFilter == TransactionFilter.INCOME,
-                    onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.INCOME)) }
-                )
-                FilterChipItem(
-                    text = "Expense",
-                    isSelected = uiState.selectedFilter == TransactionFilter.EXPENSE,
-                    onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.EXPENSE)) }
-                )
+                item {
+                    FilterChipItem(
+                        text = "All",
+                        isSelected = uiState.selectedFilter == TransactionFilter.ALL,
+                        onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.ALL)) }
+                    )
+                }
+                item {
+                    FilterChipItem(
+                        text = "Income Only",
+                        isSelected = uiState.selectedFilter == TransactionFilter.INCOME,
+                        onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.INCOME)) }
+                    )
+                }
+                item {
+                    FilterChipItem(
+                        text = "Expenses Only",
+                        isSelected = uiState.selectedFilter == TransactionFilter.EXPENSE,
+                        onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.EXPENSE)) }
+                    )
+                }
             }
 
-            // Grouped Transactions Timeline
             if (uiState.groupedTransactions.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -144,9 +151,9 @@ fun HistoryScreen(
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(uiState.groupedTransactions) { group ->
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // Section Header with Date and Day Subtotal
+                    uiState.groupedTransactions.forEach { group ->
+                        item {
+                            // Date Header & Net Subtotal
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -157,18 +164,21 @@ fun HistoryScreen(
                                     style = WalletTypography.LabelM,
                                     color = WalletColors.TextMuted
                                 )
-
-                                val sign = if (group.dayTotalNet >= 0) "+$" else "-$"
+                                val netColor = if (group.dayTotalNet >= 0) WalletColors.MintChip else WalletColors.Coral
+                                val sign = if (group.dayTotalNet >= 0) "+" else "−"
                                 Text(
-                                    text = "Day Net: $sign${String.format(java.util.Locale.US, "%.2f", kotlin.math.abs(group.dayTotalNet))}",
-                                    style = WalletTypography.LabelS,
-                                    color = if (group.dayTotalNet >= 0) WalletColors.MintChip else WalletColors.Coral
+                                    text = "$sign${CurrencyManager.format(group.dayTotalNet)}",
+                                    style = WalletTypography.LabelM,
+                                    color = netColor
                                 )
                             }
+                        }
 
-                            group.transactions.forEach { tx ->
-                                TransactionRowItem(transaction = tx)
-                            }
+                        items(group.transactions) { tx ->
+                            TransactionRowItem(
+                                transaction = tx,
+                                onClick = { onTransactionClick(tx.id) }
+                            )
                         }
                     }
                 }
@@ -188,12 +198,12 @@ private fun FilterChipItem(
             .clip(WalletShapes.Pill)
             .background(if (isSelected) WalletColors.Ink else WalletColors.Paper)
             .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 6.dp)
+            .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
         Text(
             text = text,
             style = WalletTypography.LabelS,
-            color = if (isSelected) Color.White else WalletColors.TextPrimary
+            color = if (isSelected) WalletColors.TextOnDark else WalletColors.TextPrimary
         )
     }
 }

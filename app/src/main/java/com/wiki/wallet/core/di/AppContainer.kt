@@ -16,6 +16,7 @@ import com.wiki.wallet.domain.usecase.GetDashboardSummaryUseCase
 import com.wiki.wallet.feature.categories.CategoriesViewModel
 import com.wiki.wallet.feature.dashboard.DashboardViewModel
 import com.wiki.wallet.feature.history.HistoryViewModel
+import com.wiki.wallet.feature.settings.SettingsViewModel
 import com.wiki.wallet.feature.swap.SwapViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -73,7 +74,8 @@ class AppContainer(private val context: Context) {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return DashboardViewModel(
-                getDashboardSummaryUseCase = getDashboardSummaryUseCase
+                getDashboardSummaryUseCase = getDashboardSummaryUseCase,
+                accountRepository = accountRepository
             ) as T
         }
     }
@@ -103,6 +105,15 @@ class AppContainer(private val context: Context) {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return CategoriesViewModel(
                 getCategoriesUseCase = getCategoriesUseCase
+            ) as T
+        }
+    }
+
+    val settingsViewModelFactory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return SettingsViewModel(
+                accountRepository = accountRepository
             ) as T
         }
     }

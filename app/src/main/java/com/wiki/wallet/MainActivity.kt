@@ -22,6 +22,8 @@ import com.wiki.wallet.feature.dashboard.DashboardRoute
 import com.wiki.wallet.feature.dashboard.DashboardViewModel
 import com.wiki.wallet.feature.history.HistoryRoute
 import com.wiki.wallet.feature.history.HistoryViewModel
+import com.wiki.wallet.feature.settings.SettingsRoute
+import com.wiki.wallet.feature.settings.SettingsViewModel
 import com.wiki.wallet.feature.swap.SwapRoute
 import com.wiki.wallet.feature.swap.SwapViewModel
 
@@ -71,6 +73,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToCategories = {
                                     navController.navigate("categories")
+                                },
+                                onNavigateToSettings = {
+                                    navController.navigate("settings")
                                 },
                                 viewModel = viewModel
                             )
@@ -147,6 +152,32 @@ class MainActivity : ComponentActivity() {
                                 factory = appContainer.categoriesViewModelFactory
                             )
                             CategoriesRoute(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                viewModel = viewModel
+                            )
+                        }
+
+                        composable(
+                            route = "settings",
+                            enterTransition = {
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                )
+                            },
+                            exitTransition = {
+                                slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                )
+                            }
+                        ) {
+                            val viewModel: SettingsViewModel = viewModel(
+                                factory = appContainer.settingsViewModelFactory
+                            )
+                            SettingsRoute(
                                 onNavigateBack = {
                                     navController.popBackStack()
                                 },

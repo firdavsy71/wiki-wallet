@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -21,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -40,6 +44,7 @@ import com.wiki.wallet.core.designsystem.components.SuperscriptAmount
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
+import com.wiki.wallet.domain.model.Account
 import com.wiki.wallet.domain.model.TimePeriod
 import com.wiki.wallet.domain.model.Transaction
 import java.text.SimpleDateFormat
@@ -51,6 +56,7 @@ fun DashboardRoute(
     onNavigateToAddTransaction: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToCategories: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     viewModel: DashboardViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -63,6 +69,7 @@ fun DashboardRoute(
                 DashboardUiEvent.OnNavigateToAddTransaction -> onNavigateToAddTransaction()
                 DashboardUiEvent.OnNavigateToHistory -> onNavigateToHistory()
                 DashboardUiEvent.OnNavigateToCategories -> onNavigateToCategories()
+                DashboardUiEvent.OnNavigateToSettings -> onNavigateToSettings()
                 else -> viewModel.onEvent(event)
             }
         },
@@ -84,8 +91,9 @@ fun DashboardScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 24.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Header Row
@@ -102,45 +110,29 @@ fun DashboardScreen(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Overview & Net Cash Flow",
+                        text = "Overview & Accounts",
                         style = WalletTypography.BodyM,
                         color = WalletColors.TextMuted
                     )
                 }
 
-                // Top Actions (Categories & History navigation)
+                // Action icons: Categories, History, Settings
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(WalletColors.Paper)
-                            .clickable { onEvent(DashboardUiEvent.OnNavigateToCategories) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Category,
-                            contentDescription = "Categories & Budgets",
-                            tint = WalletColors.Ink,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(WalletColors.Paper)
-                            .clickable { onEvent(DashboardUiEvent.OnNavigateToHistory) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = "Transaction History",
-                            tint = WalletColors.Ink,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    HeaderIconButton(
+                        icon = Icons.Default.Category,
+                        contentDescription = "Categories & Budgets",
+                        onClick = { onEvent(DashboardUiEvent.OnNavigateToCategories) }
+                    )
+                    HeaderIconButton(
+                        icon = Icons.Default.History,
+                        contentDescription = "Transaction History",
+                        onClick = { onEvent(DashboardUiEvent.OnNavigateToHistory) }
+                    )
+                    HeaderIconButton(
+                        icon = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        onClick = { onEvent(DashboardUiEvent.OnNavigateToSettings) }
+                    )
                 }
             }
 
@@ -207,6 +199,23 @@ fun DashboardScreen(
                 }
             }
 
+            // Accounts Carousel Section
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "My Accounts",
+                    style = WalletTypography.TitleM,
+                    color = WalletColors.TextPrimary
+                )
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(uiState.accounts) { account ->
+                        AccountBalanceCard(account = account)
+                    }
+                }
+            }
+
             // Daily Net Cash Flow Bar Chart
             IncomeBarChart(
                 items = uiState.chartItems,
@@ -218,7 +227,6 @@ fun DashboardScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Income Card
                 StatCard(
                     title = "Income",
                     amount = uiState.periodIncomeText,
@@ -226,7 +234,6 @@ fun DashboardScreen(
                     modifier = Modifier.weight(1f)
                 )
 
-                // Expense Card
                 StatCard(
                     title = "Expenses",
                     amount = uiState.periodExpenseText,
@@ -237,7 +244,7 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Recent Transactions Section Header
+            // Recent Transactions Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -296,6 +303,79 @@ fun DashboardScreen(
                 imageVector = Icons.Default.Add,
                 contentDescription = "Add Transaction",
                 modifier = Modifier.size(28.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeaderIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(WalletColors.Paper)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = WalletColors.Ink,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun AccountBalanceCard(
+    account: Account,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .width(160.dp)
+            .clip(WalletShapes.CardMedium)
+            .background(WalletColors.Paper)
+            .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+            .padding(14.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = account.iconKey, style = WalletTypography.TitleM)
+                Box(
+                    modifier = Modifier
+                        .clip(WalletShapes.Pill)
+                        .background(WalletColors.InkElevated)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = account.currency,
+                        style = WalletTypography.LabelS,
+                        color = WalletColors.TextOnDark
+                    )
+                }
+            }
+
+            Text(
+                text = account.name,
+                style = WalletTypography.LabelM,
+                color = WalletColors.TextMuted,
+                maxLines = 1
+            )
+
+            Text(
+                text = "$${String.format(Locale.US, "%,.2f", account.currentBalance)}",
+                style = WalletTypography.TitleM,
+                color = WalletColors.TextPrimary
             )
         }
     }

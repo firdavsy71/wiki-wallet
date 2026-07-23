@@ -4,12 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wiki.wallet.core.designsystem.components.BarChartItem
 import com.wiki.wallet.core.database.entity.TransactionType
+import com.wiki.wallet.domain.model.Account
 import com.wiki.wallet.domain.model.TimePeriod
 import com.wiki.wallet.domain.model.Transaction
+import com.wiki.wallet.domain.repository.AccountRepository
 import com.wiki.wallet.domain.usecase.GetDashboardSummaryUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -23,6 +26,7 @@ data class DashboardUiState(
     val savingsRateText: String = "0.0%",
     val selectedPeriod: TimePeriod = TimePeriod.WEEKLY,
     val chartItems: List<BarChartItem> = emptyList(),
+    val accounts: List<Account> = emptyList(),
     val recentTransactions: List<Transaction> = emptyList(),
     val isLoading: Boolean = false
 )
@@ -33,10 +37,12 @@ sealed interface DashboardUiEvent {
     data object OnNavigateToAddTransaction : DashboardUiEvent
     data object OnNavigateToHistory : DashboardUiEvent
     data object OnNavigateToCategories : DashboardUiEvent
+    data object OnNavigateToSettings : DashboardUiEvent
 }
 
 class DashboardViewModel(
-    private val getDashboardSummaryUseCase: GetDashboardSummaryUseCase
+    private val getDashboardSummaryUseCase: GetDashboardSummaryUseCase,
+    private val accountRepository: AccountRepository
 ) : ViewModel() {
 
     private val _selectedPeriod = MutableStateFlow(TimePeriod.WEEKLY)
@@ -45,38 +51,37 @@ class DashboardViewModel(
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     init {
-        _selectedPeriod
-            .flatMapLatest { period ->
-                getDashboardSummaryUseCase(period)
+        combine(
+            _selectedPeriod.flatMapLatest { period -> getDashboardSummaryUseCase(period) },
+            accountRepository.observeAllAccounts()
+        ) { summary, accounts ->
+            val chartBarItems = summary.chartItems.mapIndexed { idx, item ->
+                BarChartItem(
+                    dayLabel = item.dayLabel,
+                    valueRatio = item.ratioOfMax,
+                    isActive = idx == summary.chartItems.lastIndex,
+                    isPositive = item.isNetPositive,
+                    deltaChipText = if (item.netAmount != 0.0) {
+                        val sign = if (item.netAmount > 0) "+" else "−"
+                        "$sign$${String.format(java.util.Locale.US, "%.0f", kotlin.math.abs(item.netAmount))}"
+                    } else null,
+                    isDeltaPositive = item.isNetPositive
+                )
             }
-            .onEach { summary ->
-                val chartBarItems = summary.chartItems.mapIndexed { idx, item ->
-                    BarChartItem(
-                        dayLabel = item.dayLabel,
-                        valueRatio = item.ratioOfMax,
-                        isActive = idx == summary.chartItems.lastIndex,
-                        isPositive = item.isNetPositive,
-                        deltaChipText = if (item.netAmount != 0.0) {
-                            val sign = if (item.netAmount > 0) "+" else "−"
-                            "$sign$${String.format(java.util.Locale.US, "%.0f", kotlin.math.abs(item.netAmount))}"
-                        } else null,
-                        isDeltaPositive = item.isNetPositive
-                    )
-                }
 
-                _uiState.update { state ->
-                    state.copy(
-                        netBalanceText = formatCurrency(summary.netBalance),
-                        periodIncomeText = formatCurrency(summary.periodIncome),
-                        periodExpenseText = formatCurrency(summary.periodExpense),
-                        savingsRateText = String.format(java.util.Locale.US, "%.1f%%", summary.savingsRatePercent),
-                        selectedPeriod = summary.selectedPeriod,
-                        chartItems = chartBarItems,
-                        recentTransactions = summary.recentTransactions
-                    )
-                }
+            _uiState.update { state ->
+                state.copy(
+                    netBalanceText = formatCurrency(summary.netBalance),
+                    periodIncomeText = formatCurrency(summary.periodIncome),
+                    periodExpenseText = formatCurrency(summary.periodExpense),
+                    savingsRateText = String.format(java.util.Locale.US, "%.1f%%", summary.savingsRatePercent),
+                    selectedPeriod = summary.selectedPeriod,
+                    chartItems = chartBarItems,
+                    accounts = accounts,
+                    recentTransactions = summary.recentTransactions
+                )
             }
-            .launchIn(viewModelScope)
+        }.launchIn(viewModelScope)
     }
 
     fun onEvent(event: DashboardUiEvent) {

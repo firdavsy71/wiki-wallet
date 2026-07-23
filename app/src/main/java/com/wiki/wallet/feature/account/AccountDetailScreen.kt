@@ -1,7 +1,6 @@
 package com.wiki.wallet.feature.account
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wiki.wallet.core.designsystem.components.SuperscriptAmount
@@ -41,6 +40,7 @@ import com.wiki.wallet.feature.dashboard.TransactionRowItem
 fun AccountDetailRoute(
     onNavigateBack: () -> Unit,
     onNavigateToEditTransaction: (String) -> Unit,
+    onNavigateToEditAccount: (String) -> Unit,
     viewModel: AccountDetailViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -56,6 +56,7 @@ fun AccountDetailRoute(
             }
         },
         onTransactionClick = onNavigateToEditTransaction,
+        onEditAccountClick = { uiState.account?.id?.let { onNavigateToEditAccount(it) } },
         modifier = modifier
     )
 }
@@ -65,6 +66,7 @@ fun AccountDetailScreen(
     uiState: AccountDetailUiState,
     onEvent: (AccountDetailUiEvent) -> Unit,
     onTransactionClick: (String) -> Unit,
+    onEditAccountClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val account = uiState.account
@@ -109,7 +111,21 @@ fun AccountDetailScreen(
                     color = WalletColors.TextPrimary
                 )
 
-                Spacer(modifier = Modifier.width(44.dp))
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(WalletColors.Paper)
+                        .clickable { onEditAccountClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit Account",
+                        tint = WalletColors.Ink,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             // Account Hero Card (Dark Ink background)

@@ -14,10 +14,12 @@ import com.wiki.wallet.domain.usecase.AddTransactionUseCase
 import com.wiki.wallet.domain.usecase.GetCategoriesUseCase
 import com.wiki.wallet.domain.usecase.GetDashboardSummaryUseCase
 import com.wiki.wallet.feature.account.AccountDetailViewModel
+import com.wiki.wallet.feature.account.EditAccountViewModel
 import com.wiki.wallet.feature.categories.CategoriesViewModel
 import com.wiki.wallet.feature.dashboard.DashboardViewModel
 import com.wiki.wallet.feature.history.HistoryViewModel
 import com.wiki.wallet.feature.onboarding.OnboardingViewModel
+import com.wiki.wallet.feature.profile.ProfileViewModel
 import com.wiki.wallet.feature.settings.SettingsViewModel
 import com.wiki.wallet.feature.swap.SwapViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -79,6 +81,17 @@ class AppContainer(private val context: Context) {
         }
     }
 
+    val profileViewModelFactory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return ProfileViewModel(
+                context = context,
+                accountRepository = accountRepository,
+                transactionRepository = transactionRepository
+            ) as T
+        }
+    }
+
     val dashboardViewModelFactory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -98,6 +111,16 @@ class AppContainer(private val context: Context) {
                 getCategoriesUseCase = getCategoriesUseCase,
                 accountRepository = accountRepository,
                 transactionRepository = transactionRepository
+            ) as T
+        }
+    }
+
+    fun editAccountViewModelFactory(accountId: String? = null): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return EditAccountViewModel(
+                accountId = accountId,
+                accountRepository = accountRepository
             ) as T
         }
     }
@@ -125,7 +148,8 @@ class AppContainer(private val context: Context) {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return SettingsViewModel(
                 context = context,
-                accountRepository = accountRepository
+                accountRepository = accountRepository,
+                walletDatabase = walletDatabase
             ) as T
         }
     }

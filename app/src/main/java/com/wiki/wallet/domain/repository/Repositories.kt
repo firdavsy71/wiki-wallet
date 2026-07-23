@@ -40,4 +40,6 @@ interface CategoryRepository {
 interface AccountRepository {
     fun observeAllAccounts(): Flow<List<Account>>
     suspend fun addAccount(account: Account)
+    suspend fun updateAccount(account: Account)
+    suspend fun deleteAccount(account: Account)
 }

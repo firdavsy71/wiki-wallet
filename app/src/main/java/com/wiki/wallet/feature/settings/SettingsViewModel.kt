@@ -3,16 +3,18 @@ package com.wiki.wallet.feature.settings
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wiki.wallet.core.database.WalletDatabase
 import com.wiki.wallet.core.util.CurrencyManager
 import com.wiki.wallet.domain.model.Account
 import com.wiki.wallet.domain.repository.AccountRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class CurrencyItem(
     val code: String,
@@ -25,8 +27,12 @@ data class SettingsUiState(
     val selectedCurrency: String = "USD",
     val searchQuery: String = "",
     val isCurrencyPickerOpen: Boolean = false,
+    val isResetDialogOpen: Boolean = false,
+    val isSecurityLockEnabled: Boolean = false,
+    val isDailyReminderEnabled: Boolean = true,
+    val selectedTheme: String = "Dark Ink",
     val accounts: List<Account> = emptyList(),
-    val appVersion: String = "1.2.1",
+    val appVersion: String = "1.2.2",
     val currencies: List<CurrencyItem> = listOf(
         CurrencyItem("USD", "United States Dollar", "$", "🇺🇸"),
         CurrencyItem("EUR", "Euro", "€", "🇪🇺"),
@@ -71,12 +77,18 @@ sealed interface SettingsUiEvent {
     data class OnSearchQueryChanged(val query: String) : SettingsUiEvent
     data class OnCurrencySelected(val currencyCode: String) : SettingsUiEvent
     data class OnCurrencyPickerToggle(val isOpen: Boolean) : SettingsUiEvent
+    data class OnThemeSelected(val theme: String) : SettingsUiEvent
+    data class OnSecurityLockToggle(val enabled: Boolean) : SettingsUiEvent
+    data class OnDailyReminderToggle(val enabled: Boolean) : SettingsUiEvent
+    data class OnResetDialogToggle(val isOpen: Boolean) : SettingsUiEvent
+    data object OnConfirmResetData : SettingsUiEvent
     data object OnBackClicked : SettingsUiEvent
 }
 
 class SettingsViewModel(
     private val context: Context,
-    private val accountRepository: AccountRepository
+    private val accountRepository: AccountRepository,
+    private val walletDatabase: WalletDatabase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState(selectedCurrency = CurrencyManager.currentCurrencyCode.value))
@@ -113,7 +125,29 @@ class SettingsViewModel(
             is SettingsUiEvent.OnCurrencyPickerToggle -> {
                 _uiState.update { it.copy(isCurrencyPickerOpen = event.isOpen) }
             }
+            is SettingsUiEvent.OnThemeSelected -> {
+                _uiState.update { it.copy(selectedTheme = event.theme) }
+            }
+            is SettingsUiEvent.OnSecurityLockToggle -> {
+                _uiState.update { it.copy(isSecurityLockEnabled = event.enabled) }
+            }
+            is SettingsUiEvent.OnDailyReminderToggle -> {
+                _uiState.update { it.copy(isDailyReminderEnabled = event.enabled) }
+            }
+            is SettingsUiEvent.OnResetDialogToggle -> {
+                _uiState.update { it.copy(isResetDialogOpen = event.isOpen) }
+            }
+            SettingsUiEvent.OnConfirmResetData -> {
+                resetDatabase()
+            }
             SettingsUiEvent.OnBackClicked -> {}
+        }
+    }
+
+    private fun resetDatabase() {
+        viewModelScope.launch(Dispatchers.IO) {
+            walletDatabase.clearAllTables()
+            _uiState.update { it.copy(isResetDialogOpen = false) }
         }
     }
 }

@@ -38,14 +38,13 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
+import com.wiki.wallet.core.util.CurrencyManager
 import kotlinx.coroutines.delay
-import java.util.Locale
 
 data class BarChartItem(
     val dayLabel: String,
@@ -71,7 +70,7 @@ fun HatchedBar(
     LaunchedEffect(heightRatio) {
         delay(animationDelayMs)
         animatedRatio.animateTo(
-            targetValue = heightRatio.coerceIn(0.08f, 1f),
+            targetValue = heightRatio.coerceIn(0.1f, 1f),
             animationSpec = spring(
                 dampingRatio = 0.75f,
                 stiffness = Spring.StiffnessLow
@@ -138,7 +137,7 @@ fun HatchedBar(
 fun IncomeBarChart(
     items: List<BarChartItem>,
     modifier: Modifier = Modifier,
-    cardHeight: Dp = 220.dp
+    cardHeight: Dp = 230.dp
 ) {
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
 
@@ -149,22 +148,22 @@ fun IncomeBarChart(
             .clip(WalletShapes.CardLarge)
             .background(WalletColors.Paper)
             .border(1.dp, WalletColors.CardBorder, WalletShapes.CardLarge)
-            .padding(16.dp)
+            .padding(14.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Chart Legend & Selected Day Header
+            // Header Legend & Selected Day Detail
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Selected Day breakdown if tapped
                 val selectedItem = selectedIndex?.let { items.getOrNull(it) }
                 if (selectedItem != null) {
                     Text(
-                        text = "${selectedItem.dayLabel}: +$${String.format(Locale.US, "%.0f", selectedItem.incomeAmount)} / -$${String.format(Locale.US, "%.0f", selectedItem.expenseAmount)}",
+                        text = "${selectedItem.dayLabel}: +${CurrencyManager.format(selectedItem.incomeAmount)} / -${CurrencyManager.format(selectedItem.expenseAmount)}",
                         style = WalletTypography.LabelM,
-                        color = WalletColors.TextPrimary
+                        color = WalletColors.TextPrimary,
+                        maxLines = 1
                     )
                 } else {
                     Text(
@@ -174,19 +173,18 @@ fun IncomeBarChart(
                     )
                 }
 
-                // Legend
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    LegendItem(label = "Income", color = WalletColors.MintChip)
-                    LegendItem(label = "Expense", color = WalletColors.Coral)
+                    LegendItem(label = "In", color = WalletColors.MintChip)
+                    LegendItem(label = "Out", color = WalletColors.Coral)
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Bars Row
+            // Bars Area
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -222,7 +220,7 @@ fun IncomeBarChart(
 
                         Box(
                             modifier = Modifier
-                                .height(110.dp)
+                                .height(115.dp)
                                 .fillMaxWidth(),
                             contentAlignment = Alignment.BottomCenter
                         ) {
@@ -231,23 +229,24 @@ fun IncomeBarChart(
                                 isActive = item.isActive || isSelected,
                                 isPositive = item.isPositive,
                                 modifier = Modifier
-                                    .fillMaxWidth(0.75f)
+                                    .fillMaxWidth(0.70f)
                                     .fillMaxHeight(),
-                                animationDelayMs = (index * 40).toLong()
+                                animationDelayMs = (index * 30).toLong()
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
                             text = item.dayLabel,
                             style = WalletTypography.LabelS,
-                            color = if (isSelected) WalletColors.TextPrimary else WalletColors.TextMuted
+                            color = if (isSelected) WalletColors.TextPrimary else WalletColors.TextMuted,
+                            maxLines = 1
                         )
                     }
 
                     if (index < items.size - 1) {
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
                     }
                 }
             }
@@ -260,7 +259,7 @@ private fun LegendItem(label: String, color: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
-                .size(8.dp)
+                .size(7.dp)
                 .clip(CircleShape)
                 .background(color)
         )
@@ -271,17 +270,4 @@ private fun LegendItem(label: String, color: Color) {
             color = WalletColors.TextMuted
         )
     }
-}
-
-@Preview
-@Composable
-private fun IncomeBarChartPreview() {
-    val sampleItems = listOf(
-        BarChartItem("Mon", 0.45f, incomeAmount = 150.0, expenseAmount = 45.0, isActive = false, isPositive = true),
-        BarChartItem("Tue", 0.65f, incomeAmount = 0.0, expenseAmount = 89.0, isActive = false, isPositive = false, deltaChipText = "-$89", isDeltaPositive = false),
-        BarChartItem("Wed", 0.85f, incomeAmount = 450.0, expenseAmount = 20.0, isActive = false, isPositive = true),
-        BarChartItem("Thu", 0.70f, incomeAmount = 200.0, expenseAmount = 50.0, isActive = false, isPositive = true),
-        BarChartItem("Fri", 1.0f, incomeAmount = 850.0, expenseAmount = 30.0, isActive = true, isPositive = true, deltaChipText = "+$820", isDeltaPositive = true)
-    )
-    IncomeBarChart(items = sampleItems)
 }

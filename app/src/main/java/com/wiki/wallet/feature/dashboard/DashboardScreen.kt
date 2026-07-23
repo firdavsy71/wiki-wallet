@@ -23,7 +23,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -58,8 +60,10 @@ fun DashboardRoute(
     onNavigateToHistory: () -> Unit,
     onNavigateToCategories: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToProfile: () -> Unit,
     onNavigateToAccountDetail: (String) -> Unit,
     onNavigateToEditTransaction: (String) -> Unit,
+    onNavigateToAddAccount: () -> Unit,
     viewModel: DashboardViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -78,6 +82,8 @@ fun DashboardRoute(
                 else -> viewModel.onEvent(event)
             }
         },
+        onNavigateToProfile = onNavigateToProfile,
+        onNavigateToAddAccount = onNavigateToAddAccount,
         modifier = modifier
     )
 }
@@ -86,6 +92,8 @@ fun DashboardRoute(
 fun DashboardScreen(
     uiState: DashboardUiState,
     onEvent: (DashboardUiEvent) -> Unit,
+    onNavigateToProfile: () -> Unit,
+    onNavigateToAddAccount: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -101,24 +109,35 @@ fun DashboardScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Header Row
+            // Header Row with Profile Icon
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "ApexBudget 👋",
-                        style = WalletTypography.DisplayL,
-                        color = WalletColors.TextPrimary
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    HeaderIconButton(
+                        icon = Icons.Default.Person,
+                        contentDescription = "Profile",
+                        onClick = onNavigateToProfile
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Overview & Accounts",
-                        style = WalletTypography.BodyM,
-                        color = WalletColors.TextMuted
-                    )
+
+                    Column {
+                        Text(
+                            text = "${uiState.userName} 👋",
+                            style = WalletTypography.TitleM,
+                            color = WalletColors.TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "ApexBudget Overview",
+                            style = WalletTypography.LabelS,
+                            color = WalletColors.TextMuted
+                        )
+                    }
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -202,13 +221,39 @@ fun DashboardScreen(
                 }
             }
 
-            // Accounts Carousel Section
+            // Accounts Carousel Section with Edit/Add button
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "My Accounts",
-                    style = WalletTypography.TitleM,
-                    color = WalletColors.TextPrimary
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "My Accounts",
+                        style = WalletTypography.TitleM,
+                        color = WalletColors.TextPrimary
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .clickable { onNavigateToAddAccount() }
+                            .padding(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Manage Accounts",
+                            tint = WalletColors.Coral,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Manage",
+                            style = WalletTypography.LabelM,
+                            color = WalletColors.Coral
+                        )
+                    }
+                }
 
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -278,7 +323,7 @@ fun DashboardScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No transactions logged yet",
+                        text = "No transactions logged yet. Tap + to add one!",
                         style = WalletTypography.BodyM,
                         color = WalletColors.TextMuted
                     )

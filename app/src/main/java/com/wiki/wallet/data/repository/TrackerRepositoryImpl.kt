@@ -216,4 +216,28 @@ class AccountRepositoryImpl(
             )
         )
     }
+
+    override suspend fun updateAccount(account: Account) {
+        accountDao.insertAccount(
+            AccountEntity(
+                id = account.id,
+                name = account.name,
+                startingBalance = account.startingBalance,
+                currency = account.currency,
+                iconKey = account.iconKey
+            )
+        )
+    }
+
+    override suspend fun deleteAccount(account: Account) {
+        accountDao.deleteAccount(
+            AccountEntity(
+                id = account.id,
+                name = account.name,
+                startingBalance = account.startingBalance,
+                currency = account.currency,
+                iconKey = account.iconKey
+            )
+        )
+    }
 }

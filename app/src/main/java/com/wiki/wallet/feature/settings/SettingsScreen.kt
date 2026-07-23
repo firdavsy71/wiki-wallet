@@ -25,13 +25,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -123,11 +130,7 @@ fun SettingsScreen(
 
             // Section 1: Default Currency Selector Card
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Default Currency",
-                    style = WalletTypography.TitleM,
-                    color = WalletColors.TextPrimary
-                )
+                Text(text = "Default Currency", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
 
                 Box(
                     modifier = Modifier
@@ -172,23 +175,56 @@ fun SettingsScreen(
                 }
             }
 
-            // Section 2: Account Overview
+            // Section 2: Appearance & Theme Card
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Configured Accounts",
-                    style = WalletTypography.TitleM,
-                    color = WalletColors.TextPrimary
-                )
+                Text(text = "Appearance & Theme", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
 
-                uiState.accounts.forEach { account ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(WalletShapes.CardMedium)
-                            .background(WalletColors.Paper)
-                            .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
-                            .padding(14.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(WalletShapes.CardMedium)
+                        .background(WalletColors.Paper)
+                        .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Palette, contentDescription = "Theme", tint = WalletColors.Ink, modifier = Modifier.size(20.dp))
+                            Text(text = "Color Palette", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            ThemeChip("Dark Ink", uiState.selectedTheme == "Dark Ink") {
+                                onEvent(SettingsUiEvent.OnThemeSelected("Dark Ink"))
+                            }
+                            ThemeChip("Light Paper", uiState.selectedTheme == "Light Paper") {
+                                onEvent(SettingsUiEvent.OnThemeSelected("Light Paper"))
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Section 3: Security & Notifications Toggles
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(text = "Security & Notifications", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(WalletShapes.CardMedium)
+                        .background(WalletColors.Paper)
+                        .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                        .padding(14.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -198,63 +234,71 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Text(text = account.iconKey, style = WalletTypography.TitleM)
-                                Text(text = account.name, style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                                Icon(imageVector = Icons.Default.Lock, contentDescription = "Lock", tint = WalletColors.Ink, modifier = Modifier.size(20.dp))
+                                Text(text = "App Lock / Biometric", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
                             }
-                            Text(
-                                text = "$${String.format(Locale.US, "%,.2f", account.currentBalance)}",
-                                style = WalletTypography.TitleM,
-                                color = WalletColors.TextPrimary
+                            Switch(
+                                checked = uiState.isSecurityLockEnabled,
+                                onCheckedChange = { onEvent(SettingsUiEvent.OnSecurityLockToggle(it)) },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = WalletColors.Coral)
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.Notifications, contentDescription = "Reminder", tint = WalletColors.Ink, modifier = Modifier.size(20.dp))
+                                Text(text = "Daily Logging Reminder", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                            }
+                            Switch(
+                                checked = uiState.isDailyReminderEnabled,
+                                onCheckedChange = { onEvent(SettingsUiEvent.OnDailyReminderToggle(it)) },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = WalletColors.MintChip)
                             )
                         }
                     }
                 }
             }
 
-            // Section 3: Privacy & Security Card
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(WalletShapes.CardLarge)
-                    .background(WalletColors.Ink)
-                    .padding(18.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(WalletColors.InkElevated),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = "Security",
-                            tint = WalletColors.MintChip,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+            // Section 4: Data Management & Reset Card
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(text = "Data Management", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
 
-                    Column {
-                        Text(
-                            text = "Local-First & Offline Storage",
-                            style = WalletTypography.TitleM,
-                            color = WalletColors.TextOnDark
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Your transactions are stored 100% locally on your device with no external server tracking.",
-                            style = WalletTypography.BodyM,
-                            color = WalletColors.TextMuted
-                        )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(WalletShapes.CardMedium)
+                        .background(WalletColors.Coral.copy(alpha = 0.10f))
+                        .border(1.dp, WalletColors.Coral.copy(alpha = 0.3f), WalletShapes.CardMedium)
+                        .clickable { onEvent(SettingsUiEvent.OnResetDialogToggle(true)) }
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Reset", tint = WalletColors.Coral, modifier = Modifier.size(20.dp))
+                            Column {
+                                Text(text = "Clear All App Data", style = WalletTypography.TitleM, color = WalletColors.Coral)
+                                Text(text = "Wipe all transactions & accounts to start clean.", style = WalletTypography.BodyM, color = WalletColors.TextMuted)
+                            }
+                        }
                     }
                 }
             }
 
-            // Section 4: App Info Card
+            // Section 5: App Info Card
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -272,19 +316,10 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = "Info",
-                            tint = WalletColors.TextMuted,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Icon(imageVector = Icons.Default.Info, contentDescription = "Info", tint = WalletColors.TextMuted, modifier = Modifier.size(20.dp))
                         Text(text = "App Version", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
                     }
-                    Text(
-                        text = "ApexBudget v${uiState.appVersion}",
-                        style = WalletTypography.LabelM,
-                        color = WalletColors.Coral
-                    )
+                    Text(text = "ApexBudget v${uiState.appVersion}", style = WalletTypography.LabelM, color = WalletColors.Coral)
                 }
             }
         }
@@ -303,13 +338,8 @@ fun SettingsScreen(
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "Select Country Currency",
-                    style = WalletTypography.TitleM,
-                    color = WalletColors.TextPrimary
-                )
+                Text(text = "Select Country Currency", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
 
-                // Search Bar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -321,12 +351,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = WalletColors.TextMuted,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Icon(imageVector = Icons.Default.Search, contentDescription = "Search", tint = WalletColors.TextMuted, modifier = Modifier.size(20.dp))
                         BasicTextField(
                             value = uiState.searchQuery,
                             onValueChange = { onEvent(SettingsUiEvent.OnSearchQueryChanged(it)) },
@@ -336,11 +361,7 @@ fun SettingsScreen(
                             decorationBox = { innerTextField ->
                                 Box {
                                     if (uiState.searchQuery.isEmpty()) {
-                                        Text(
-                                            text = "Search by code or country name...",
-                                            style = WalletTypography.BodyM,
-                                            color = WalletColors.TextMuted
-                                        )
+                                        Text(text = "Search by code or country name...", style = WalletTypography.BodyM, color = WalletColors.TextMuted)
                                     }
                                     innerTextField()
                                 }
@@ -388,18 +409,13 @@ fun SettingsScreen(
                                         Text(
                                             text = "Symbol: ${item.symbol}",
                                             style = WalletTypography.LabelS,
-                                            color = if (isSelected) WalletColors.TextMuted else WalletColors.TextMuted
+                                            color = WalletColors.TextMuted
                                         )
                                     }
                                 }
 
                                 if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
-                                        tint = WalletColors.MintChip,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                                    Icon(imageVector = Icons.Default.Check, contentDescription = "Selected", tint = WalletColors.MintChip, modifier = Modifier.size(20.dp))
                                 }
                             }
                         }
@@ -407,5 +423,45 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    // Reset Confirmation Dialog
+    if (uiState.isResetDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { onEvent(SettingsUiEvent.OnResetDialogToggle(false)) },
+            title = { Text(text = "Reset All App Data?", style = WalletTypography.TitleM) },
+            text = { Text(text = "This action will delete all logged transactions and accounts permanently. This cannot be undone.", style = WalletTypography.BodyM) },
+            confirmButton = {
+                TextButton(onClick = { onEvent(SettingsUiEvent.OnConfirmResetData) }) {
+                    Text(text = "Clear All Data", color = WalletColors.Coral, style = WalletTypography.TitleM)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onEvent(SettingsUiEvent.OnResetDialogToggle(false)) }) {
+                    Text(text = "Cancel", style = WalletTypography.LabelM)
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ThemeChip(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(WalletShapes.Pill)
+            .background(if (isSelected) WalletColors.Ink else WalletColors.Paper)
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = label,
+            style = WalletTypography.LabelS,
+            color = if (isSelected) WalletColors.TextOnDark else WalletColors.TextPrimary
+        )
     }
 }

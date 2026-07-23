@@ -21,6 +21,8 @@ import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WikiWalletTheme
 import com.wiki.wallet.feature.account.AccountDetailRoute
 import com.wiki.wallet.feature.account.AccountDetailViewModel
+import com.wiki.wallet.feature.account.EditAccountRoute
+import com.wiki.wallet.feature.account.EditAccountViewModel
 import com.wiki.wallet.feature.categories.CategoriesRoute
 import com.wiki.wallet.feature.categories.CategoriesViewModel
 import com.wiki.wallet.feature.dashboard.DashboardRoute
@@ -29,6 +31,8 @@ import com.wiki.wallet.feature.history.HistoryRoute
 import com.wiki.wallet.feature.history.HistoryViewModel
 import com.wiki.wallet.feature.onboarding.OnboardingRoute
 import com.wiki.wallet.feature.onboarding.OnboardingViewModel
+import com.wiki.wallet.feature.profile.ProfileRoute
+import com.wiki.wallet.feature.profile.ProfileViewModel
 import com.wiki.wallet.feature.settings.SettingsRoute
 import com.wiki.wallet.feature.settings.SettingsViewModel
 import com.wiki.wallet.feature.swap.SwapRoute
@@ -70,6 +74,18 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        composable("profile") {
+                            val viewModel: ProfileViewModel = viewModel(
+                                factory = appContainer.profileViewModelFactory
+                            )
+                            ProfileRoute(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                viewModel = viewModel
+                            )
+                        }
+
                         composable(
                             route = "dashboard",
                             enterTransition = {
@@ -101,11 +117,71 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToSettings = {
                                     navController.navigate("settings")
                                 },
+                                onNavigateToProfile = {
+                                    navController.navigate("profile")
+                                },
                                 onNavigateToAccountDetail = { accountId ->
                                     navController.navigate("account_detail/$accountId")
                                 },
                                 onNavigateToEditTransaction = { transactionId ->
                                     navController.navigate("edit_transaction/$transactionId")
+                                },
+                                onNavigateToAddAccount = {
+                                    navController.navigate("edit_account")
+                                },
+                                viewModel = viewModel
+                            )
+                        }
+
+                        composable(
+                            route = "edit_account",
+                            enterTransition = {
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Up,
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                )
+                            },
+                            exitTransition = {
+                                slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                )
+                            }
+                        ) {
+                            val viewModel: EditAccountViewModel = viewModel(
+                                factory = appContainer.editAccountViewModelFactory(null)
+                            )
+                            EditAccountRoute(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                viewModel = viewModel
+                            )
+                        }
+
+                        composable(
+                            route = "edit_account/{accountId}",
+                            arguments = listOf(navArgument("accountId") { type = NavType.StringType }),
+                            enterTransition = {
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Up,
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                )
+                            },
+                            exitTransition = {
+                                slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                )
+                            }
+                        ) { backStackEntry ->
+                            val accountId = backStackEntry.arguments?.getString("accountId")
+                            val viewModel: EditAccountViewModel = viewModel(
+                                factory = appContainer.editAccountViewModelFactory(accountId)
+                            )
+                            EditAccountRoute(
+                                onNavigateBack = {
+                                    navController.popBackStack()
                                 },
                                 viewModel = viewModel
                             )
@@ -272,6 +348,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToEditTransaction = { transactionId ->
                                     navController.navigate("edit_transaction/$transactionId")
+                                },
+                                onNavigateToEditAccount = { accId ->
+                                    navController.navigate("edit_account/$accId")
                                 },
                                 viewModel = viewModel
                             )

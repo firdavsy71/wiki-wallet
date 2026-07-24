@@ -187,21 +187,24 @@ class AccountRepositoryImpl(
             accountDao.observeAllAccounts(),
             transactionDao.observeAllTransactions()
         ) { accounts, txs ->
-            accounts.map { account ->
-                val accountTxs = txs.filter { it.accountId == account.id }
-                val income = accountTxs.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-                val expense = accountTxs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
-                val current = account.startingBalance + income - expense
+            accounts
+                .sortedBy { it.displayOrder }
+                .map { account ->
+                    val accountTxs = txs.filter { it.accountId == account.id }
+                    val income = accountTxs.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+                    val expense = accountTxs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+                    val current = account.startingBalance + income - expense
 
-                Account(
-                    id = account.id,
-                    name = account.name,
-                    startingBalance = account.startingBalance,
-                    currentBalance = current,
-                    currency = account.currency,
-                    iconKey = account.iconKey
-                )
-            }
+                    Account(
+                        id = account.id,
+                        name = account.name,
+                        startingBalance = account.startingBalance,
+                        currentBalance = current,
+                        currency = account.currency,
+                        iconKey = account.iconKey,
+                        displayOrder = account.displayOrder
+                    )
+                }
         }
     }
 
@@ -212,7 +215,8 @@ class AccountRepositoryImpl(
                 name = account.name,
                 startingBalance = account.startingBalance,
                 currency = account.currency,
-                iconKey = account.iconKey
+                iconKey = account.iconKey,
+                displayOrder = account.displayOrder
             )
         )
     }
@@ -224,7 +228,8 @@ class AccountRepositoryImpl(
                 name = account.name,
                 startingBalance = account.startingBalance,
                 currency = account.currency,
-                iconKey = account.iconKey
+                iconKey = account.iconKey,
+                displayOrder = account.displayOrder
             )
         )
     }
@@ -236,8 +241,23 @@ class AccountRepositoryImpl(
                 name = account.name,
                 startingBalance = account.startingBalance,
                 currency = account.currency,
-                iconKey = account.iconKey
+                iconKey = account.iconKey,
+                displayOrder = account.displayOrder
             )
         )
+    }
+
+    override suspend fun reorderAccounts(accounts: List<Account>) {
+        val updatedEntities = accounts.mapIndexed { index, account ->
+            AccountEntity(
+                id = account.id,
+                name = account.name,
+                startingBalance = account.startingBalance,
+                currency = account.currency,
+                iconKey = account.iconKey,
+                displayOrder = index
+            )
+        }
+        accountDao.insertAccounts(updatedEntities)
     }
 }

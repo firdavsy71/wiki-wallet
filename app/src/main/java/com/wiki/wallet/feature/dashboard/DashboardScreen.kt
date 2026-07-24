@@ -16,11 +16,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Edit
@@ -221,7 +223,7 @@ fun DashboardScreen(
                 }
             }
 
-            // Accounts Carousel Section with Edit/Add button
+            // Accounts Carousel Section with Reorder Controls
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -258,10 +260,14 @@ fun DashboardScreen(
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(uiState.accounts) { account ->
+                    itemsIndexed(uiState.accounts) { index, account ->
                         AccountBalanceCard(
                             account = account,
-                            onClick = { onEvent(DashboardUiEvent.OnAccountClick(account.id)) }
+                            canMoveLeft = index > 0,
+                            canMoveRight = index < uiState.accounts.lastIndex,
+                            onClick = { onEvent(DashboardUiEvent.OnAccountClick(account.id)) },
+                            onMoveLeft = { onEvent(DashboardUiEvent.OnMoveAccountLeft(account.id)) },
+                            onMoveRight = { onEvent(DashboardUiEvent.OnMoveAccountRight(account.id)) }
                         )
                     }
                 }
@@ -387,12 +393,16 @@ private fun HeaderIconButton(
 @Composable
 private fun AccountBalanceCard(
     account: Account,
+    canMoveLeft: Boolean,
+    canMoveRight: Boolean,
     onClick: () -> Unit,
+    onMoveLeft: () -> Unit,
+    onMoveRight: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
-            .width(160.dp)
+            .width(170.dp)
             .clip(WalletShapes.CardMedium)
             .background(WalletColors.Paper)
             .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
@@ -405,7 +415,30 @@ private fun AccountBalanceCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = account.iconKey, style = WalletTypography.TitleM)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(text = account.iconKey, style = WalletTypography.TitleM)
+                    if (canMoveLeft) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Move Left",
+                            tint = WalletColors.TextMuted,
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clickable { onMoveLeft() }
+                        )
+                    }
+                    if (canMoveRight) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Move Right",
+                            tint = WalletColors.TextMuted,
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clickable { onMoveRight() }
+                        )
+                    }
+                }
+
                 Box(
                     modifier = Modifier
                         .clip(WalletShapes.Pill)

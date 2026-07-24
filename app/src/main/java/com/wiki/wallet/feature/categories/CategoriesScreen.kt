@@ -19,8 +19,11 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -32,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wiki.wallet.core.database.entity.TransactionType
@@ -128,7 +132,7 @@ fun CategoriesScreen(
         }
     }
 
-    // Modal Bottom Sheet for Category Budget Detail
+    // Modal Bottom Sheet for Category Budget Detail & Customization
     if (uiState.isDetailBottomSheetOpen && uiState.selectedCategory != null) {
         val category = uiState.selectedCategory
         val isIncome = category.type == TransactionType.INCOME
@@ -178,7 +182,7 @@ fun CategoriesScreen(
                         .background(WalletColors.Paper)
                         .padding(16.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -191,29 +195,81 @@ fun CategoriesScreen(
                             )
                         }
 
-                        if (!isIncome && category.monthlyBudget != null) {
+                        if (!isIncome) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(text = "Monthly Budget", style = WalletTypography.BodyM, color = WalletColors.TextMuted)
-                                Text(
-                                    text = CurrencyManager.format(category.monthlyBudget),
-                                    style = WalletTypography.TitleM,
-                                    color = WalletColors.TextPrimary
-                                )
+
+                                if (uiState.isEditingBudget) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        BasicTextField(
+                                            value = uiState.editedBudgetText,
+                                            onValueChange = { onEvent(CategoriesUiEvent.OnBudgetTextChanged(it)) },
+                                            textStyle = WalletTypography.TitleM.copy(color = WalletColors.TextPrimary),
+                                            singleLine = true,
+                                            cursorBrush = SolidColor(WalletColors.Coral),
+                                            modifier = Modifier
+                                                .width(100.dp)
+                                                .clip(WalletShapes.CardMedium)
+                                                .background(WalletColors.PaperPure)
+                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(WalletColors.Coral)
+                                                .clickable { onEvent(CategoriesUiEvent.OnSaveBudgetClicked) },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Save",
+                                                tint = WalletColors.TextOnDark,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = if (category.monthlyBudget != null) CurrencyManager.format(category.monthlyBudget) else "Not Set",
+                                            style = WalletTypography.TitleM,
+                                            color = WalletColors.TextPrimary
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit Budget",
+                                            tint = WalletColors.Coral,
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .clickable { onEvent(CategoriesUiEvent.OnToggleEditBudget) }
+                                        )
+                                    }
+                                }
                             }
 
-                            val ratio = (category.currentPeriodSpent / category.monthlyBudget).coerceIn(0.0, 1.0).toFloat()
-                            LinearProgressIndicator(
-                                progress = { ratio },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(8.dp)
-                                    .clip(WalletShapes.Pill),
-                                color = if (ratio > 0.9f) WalletColors.Coral else WalletColors.MintChip,
-                                trackColor = WalletColors.CardBorder
-                            )
+                            if (category.monthlyBudget != null) {
+                                val ratio = (category.currentPeriodSpent / category.monthlyBudget).coerceIn(0.0, 1.0).toFloat()
+                                LinearProgressIndicator(
+                                    progress = { ratio },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(8.dp)
+                                        .clip(WalletShapes.Pill),
+                                    color = if (ratio > 0.9f) WalletColors.Coral else WalletColors.MintChip,
+                                    trackColor = WalletColors.CardBorder
+                                )
+                            }
                         }
                     }
                 }

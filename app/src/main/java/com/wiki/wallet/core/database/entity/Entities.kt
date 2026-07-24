@@ -37,5 +37,6 @@ data class AccountEntity(
     val name: String,             // e.g. "Cash Wallet", "Checking Card", "Savings Account"
     val startingBalance: Double,
     val currency: String = "USD", // ISO 4217, default USD
-    val iconKey: String = "💳"
+    val iconKey: String = "💳",
+    val displayOrder: Int = 0
 )

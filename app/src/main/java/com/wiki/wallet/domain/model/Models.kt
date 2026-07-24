@@ -42,7 +42,8 @@ data class Account(
     val startingBalance: Double,
     val currentBalance: Double,
     val currency: String = "USD",
-    val iconKey: String = "💳"
+    val iconKey: String = "💳",
+    val displayOrder: Int = 0
 )
 
 data class NetCashFlowItem(

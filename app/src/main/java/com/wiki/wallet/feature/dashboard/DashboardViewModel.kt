@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class DashboardUiState(
     val userName: String = "Apex User",
@@ -35,6 +36,8 @@ data class DashboardUiState(
 sealed interface DashboardUiEvent {
     data class OnPeriodSelected(val period: TimePeriod) : DashboardUiEvent
     data class OnAccountClick(val accountId: String) : DashboardUiEvent
+    data class OnMoveAccountLeft(val accountId: String) : DashboardUiEvent
+    data class OnMoveAccountRight(val accountId: String) : DashboardUiEvent
     data class OnTransactionClick(val transactionId: String) : DashboardUiEvent
     data object OnNavigateToAddTransaction : DashboardUiEvent
     data object OnNavigateToHistory : DashboardUiEvent
@@ -95,7 +98,28 @@ class DashboardViewModel(
             is DashboardUiEvent.OnPeriodSelected -> {
                 _selectedPeriod.value = event.period
             }
+            is DashboardUiEvent.OnMoveAccountLeft -> {
+                moveAccount(event.accountId, -1)
+            }
+            is DashboardUiEvent.OnMoveAccountRight -> {
+                moveAccount(event.accountId, 1)
+            }
             else -> {}
+        }
+    }
+
+    private fun moveAccount(accountId: String, direction: Int) {
+        val currentAccounts = _uiState.value.accounts.toMutableList()
+        val index = currentAccounts.indexOfFirst { it.id == accountId }
+        if (index == -1) return
+
+        val newIndex = index + direction
+        if (newIndex in 0..currentAccounts.lastIndex) {
+            val item = currentAccounts.removeAt(index)
+            currentAccounts.add(newIndex, item)
+            viewModelScope.launch {
+                accountRepository.reorderAccounts(currentAccounts)
+            }
         }
     }
 }

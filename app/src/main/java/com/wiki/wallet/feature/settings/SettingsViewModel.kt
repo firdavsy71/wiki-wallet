@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wiki.wallet.core.database.WalletDatabase
+import com.wiki.wallet.core.designsystem.theme.ThemeManager
 import com.wiki.wallet.core.util.CurrencyManager
 import com.wiki.wallet.domain.model.Account
 import com.wiki.wallet.domain.repository.AccountRepository
@@ -32,7 +33,7 @@ data class SettingsUiState(
     val isDailyReminderEnabled: Boolean = true,
     val selectedTheme: String = "Dark Ink",
     val accounts: List<Account> = emptyList(),
-    val appVersion: String = "1.2.2",
+    val appVersion: String = "1.2.3",
     val currencies: List<CurrencyItem> = listOf(
         CurrencyItem("USD", "United States Dollar", "$", "🇺🇸"),
         CurrencyItem("EUR", "Euro", "€", "🇪🇺"),
@@ -91,17 +92,24 @@ class SettingsViewModel(
     private val walletDatabase: WalletDatabase
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState(selectedCurrency = CurrencyManager.currentCurrencyCode.value))
+    private val _uiState = MutableStateFlow(
+        SettingsUiState(
+            selectedCurrency = CurrencyManager.currentCurrencyCode.value,
+            selectedTheme = ThemeManager.themeMode.value
+        )
+    )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
         combine(
             CurrencyManager.currentCurrencyCode,
+            ThemeManager.themeMode,
             accountRepository.observeAllAccounts()
-        ) { currencyCode, accounts ->
+        ) { currencyCode, themeMode, accounts ->
             _uiState.update {
                 it.copy(
                     selectedCurrency = currencyCode,
+                    selectedTheme = themeMode,
                     accounts = accounts
                 )
             }
@@ -126,6 +134,7 @@ class SettingsViewModel(
                 _uiState.update { it.copy(isCurrencyPickerOpen = event.isOpen) }
             }
             is SettingsUiEvent.OnThemeSelected -> {
+                ThemeManager.setThemeMode(context, event.theme)
                 _uiState.update { it.copy(selectedTheme = event.theme) }
             }
             is SettingsUiEvent.OnSecurityLockToggle -> {

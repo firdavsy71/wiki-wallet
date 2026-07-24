@@ -138,7 +138,8 @@ class AppContainer(private val context: Context) {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return CategoriesViewModel(
-                getCategoriesUseCase = getCategoriesUseCase
+                getCategoriesUseCase = getCategoriesUseCase,
+                categoryRepository = categoryRepository
             ) as T
         }
     }

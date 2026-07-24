@@ -1,6 +1,14 @@
 package com.wiki.wallet.domain.model
 
+import com.wiki.wallet.core.database.entity.AccountType
 import com.wiki.wallet.core.database.entity.TransactionType
+
+data class CurrencyItem(
+    val code: String,
+    val name: String,
+    val symbol: String,
+    val flag: String
+)
 
 data class Transaction(
     val id: String,
@@ -16,7 +24,11 @@ data class Transaction(
     val date: Long,
     val createdAt: Long,
     val isRecurring: Boolean = false,
-    val recurrenceRule: String? = null
+    val recurrenceRule: String? = null,
+    val receiptImagePath: String? = null,
+    val isBill: Boolean = false,
+    val dueDate: Long? = null,
+    val isPaid: Boolean = true
 )
 
 data class Category(
@@ -26,7 +38,8 @@ data class Category(
     val iconKey: String,
     val colorToken: String,
     val monthlyBudget: Double? = null,
-    val currentPeriodSpent: Double = 0.0
+    val currentPeriodSpent: Double = 0.0,
+    val parentCategoryId: String? = null
 ) {
     val budgetProgressRatio: Float
         get() {
@@ -43,7 +56,8 @@ data class Account(
     val currentBalance: Double,
     val currency: String = "USD",
     val iconKey: String = "💳",
-    val displayOrder: Int = 0
+    val displayOrder: Int = 0,
+    val type: AccountType = AccountType.BANK
 )
 
 data class NetCashFlowItem(

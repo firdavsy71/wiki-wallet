@@ -272,7 +272,43 @@ fun SettingsScreen(
 
             // Section 4: Data Management & Reset Card
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = "Data Management", style = WalletTypography.TitleM, color = textColor)
+                Text(text = "Data Management & Export", style = WalletTypography.TitleM, color = textColor)
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(WalletShapes.CardMedium)
+                        .background(cardBg)
+                        .border(1.dp, borderColor, WalletShapes.CardMedium)
+                        .clickable { onEvent(SettingsUiEvent.OnExportCsvClicked) }
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Info, contentDescription = "Export CSV", tint = WalletColors.MintChip, modifier = Modifier.size(20.dp))
+                            Column {
+                                Text(text = "Export Transactions to CSV", style = WalletTypography.TitleM, color = textColor)
+                                Text(text = "Download clean spreadsheet file for bookkeeping.", style = WalletTypography.BodyM, color = WalletColors.TextMuted)
+                            }
+                        }
+                    }
+                }
+
+                if (uiState.exportStatusMessage != null) {
+                    Text(
+                        text = uiState.exportStatusMessage ?: "",
+                        style = WalletTypography.LabelS,
+                        color = WalletColors.MintChip,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
 
                 Box(
                     modifier = Modifier

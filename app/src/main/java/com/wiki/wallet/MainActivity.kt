@@ -86,6 +86,18 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        composable("calendar") {
+                            val viewModel: com.wiki.wallet.feature.calendar.CalendarViewModel = viewModel(
+                                factory = appContainer.calendarViewModelFactory
+                            )
+                            com.wiki.wallet.feature.calendar.CalendarRoute(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                viewModel = viewModel
+                            )
+                        }
+
                         composable(
                             route = "dashboard",
                             enterTransition = {
@@ -119,6 +131,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToProfile = {
                                     navController.navigate("profile")
+                                },
+                                onNavigateToCalendar = {
+                                    navController.navigate("calendar")
                                 },
                                 onNavigateToAccountDetail = { accountId ->
                                     navController.navigate("account_detail/$accountId")

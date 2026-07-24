@@ -1,6 +1,7 @@
 package com.wiki.wallet.core.util
 
 import android.content.Context
+import com.wiki.wallet.domain.model.CurrencyItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,44 +12,46 @@ object CurrencyManager {
     private const val KEY_CURRENCY_CODE = "selected_currency_code"
     private const val KEY_CURRENCY_SYMBOL = "selected_currency_symbol"
 
-    private val symbolMap = mapOf(
-        "USD" to "$",
-        "EUR" to "€",
-        "GBP" to "£",
-        "JPY" to "¥",
-        "AUD" to "$",
-        "CAD" to "$",
-        "CHF" to "CHF",
-        "CNY" to "¥",
-        "HKD" to "$",
-        "NZD" to "$",
-        "SEK" to "kr",
-        "KRW" to "₩",
-        "SGD" to "$",
-        "NOK" to "kr",
-        "MXN" to "$",
-        "INR" to "₹",
-        "RUB" to "₽",
-        "BRL" to "R$",
-        "ZAR" to "R",
-        "TRY" to "₺",
-        "TWD" to "NT$",
-        "AED" to "AED",
-        "SAR" to "SAR",
-        "THB" to "฿",
-        "IDR" to "Rp",
-        "MYR" to "RM",
-        "PHP" to "₱",
-        "VND" to "₫",
-        "PLN" to "zł",
-        "EGP" to "EGP",
-        "PKR" to "Rs",
-        "BDT" to "৳",
-        "NGN" to "₦",
-        "UAH" to "₴",
-        "UZS" to "so'm",
-        "KZT" to "₸"
+    val availableCurrencies = listOf(
+        CurrencyItem("USD", "United States Dollar", "$", "🇺🇸"),
+        CurrencyItem("EUR", "Euro", "€", "🇪🇺"),
+        CurrencyItem("GBP", "British Pound", "£", "🇬🇧"),
+        CurrencyItem("JPY", "Japanese Yen", "¥", "🇯🇵"),
+        CurrencyItem("AUD", "Australian Dollar", "$", "🇦🇺"),
+        CurrencyItem("CAD", "Canadian Dollar", "$", "🇨🇦"),
+        CurrencyItem("CHF", "Swiss Franc", "CHF", "🇨🇭"),
+        CurrencyItem("CNY", "Chinese Yuan", "¥", "🇨🇳"),
+        CurrencyItem("HKD", "Hong Kong Dollar", "$", "🇭🇰"),
+        CurrencyItem("NZD", "New Zealand Dollar", "$", "🇳🇿"),
+        CurrencyItem("SEK", "Swedish Krona", "kr", "🇸🇪"),
+        CurrencyItem("KRW", "South Korean Won", "₩", "🇰🇷"),
+        CurrencyItem("SGD", "Singapore Dollar", "$", "🇸🇬"),
+        CurrencyItem("NOK", "Norwegian Krone", "kr", "🇳🇴"),
+        CurrencyItem("MXN", "Mexican Peso", "$", "🇲🇽"),
+        CurrencyItem("INR", "Indian Rupee", "₹", "🇮🇳"),
+        CurrencyItem("RUB", "Russian Ruble", "₽", "🇷🇺"),
+        CurrencyItem("BRL", "Brazilian Real", "R$", "🇧🇷"),
+        CurrencyItem("ZAR", "South African Rand", "R", "🇿🇦"),
+        CurrencyItem("TRY", "Turkish Lira", "₺", "🇹🇷"),
+        CurrencyItem("TWD", "New Taiwan Dollar", "NT$", "🇹🇼"),
+        CurrencyItem("AED", "UAE Dirham", "AED", "🇦🇪"),
+        CurrencyItem("SAR", "Saudi Riyal", "SAR", "🇸🇦"),
+        CurrencyItem("THB", "Thai Baht", "฿", "🇹🇭"),
+        CurrencyItem("IDR", "Indonesian Rupiah", "Rp", "🇮🇩"),
+        CurrencyItem("MYR", "Malaysian Ringgit", "RM", "🇲🇾"),
+        CurrencyItem("PHP", "Philippine Peso", "₱", "🇵🇭"),
+        CurrencyItem("VND", "Vietnamese Dong", "₫", "🇻🇳"),
+        CurrencyItem("PLN", "Polish Zloty", "zł", "🇵🇱"),
+        CurrencyItem("EGP", "Egyptian Pound", "EGP", "🇪🇬"),
+        CurrencyItem("PKR", "Pakistani Rupee", "Rs", "🇵🇰"),
+        CurrencyItem("BDT", "Bangladeshi Taka", "৳", "🇧🇩"),
+        CurrencyItem("NGN", "Nigerian Naira", "₦", "🇳🇬"),
+        CurrencyItem("UAH", "Ukrainian Hryvnia", "₴", "🇺🇦"),
+        CurrencyItem("UZS", "Uzbekistani Som", "so'm", "🇺🇿"),
+        CurrencyItem("KZT", "Kazakhstani Tenge", "₸", "🇰🇿")
     )
+
+    private val symbolMap = availableCurrencies.associate { it.code to it.symbol }
 
     private val _currentCurrencyCode = MutableStateFlow("USD")
     val currentCurrencyCode: StateFlow<String> = _currentCurrencyCode.asStateFlow()
@@ -63,6 +66,15 @@ object CurrencyManager {
 
         _currentCurrencyCode.value = savedCode
         _currentCurrencySymbol.value = savedSymbol
+    }
+
+    fun getCurrentCurrencyCode(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString(KEY_CURRENCY_CODE, "USD") ?: "USD"
+    }
+
+    fun setCurrencyCode(context: Context, code: String) {
+        setCurrency(context, code)
     }
 
     fun setCurrency(context: Context, code: String) {

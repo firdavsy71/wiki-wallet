@@ -15,6 +15,7 @@ import com.wiki.wallet.domain.usecase.GetCategoriesUseCase
 import com.wiki.wallet.domain.usecase.GetDashboardSummaryUseCase
 import com.wiki.wallet.feature.account.AccountDetailViewModel
 import com.wiki.wallet.feature.account.EditAccountViewModel
+import com.wiki.wallet.feature.calendar.CalendarViewModel
 import com.wiki.wallet.feature.categories.CategoriesViewModel
 import com.wiki.wallet.feature.dashboard.DashboardViewModel
 import com.wiki.wallet.feature.history.HistoryViewModel
@@ -72,6 +73,15 @@ class AppContainer(private val context: Context) {
             categoryRepository = categoryRepository,
             transactionRepository = transactionRepository
         )
+    }
+
+    val calendarViewModelFactory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return CalendarViewModel(
+                transactionRepository = transactionRepository
+            ) as T
+        }
     }
 
     val onboardingViewModelFactory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {

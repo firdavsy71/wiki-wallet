@@ -15,7 +15,11 @@ interface TransactionRepository {
         categoryId: String,
         accountId: String,
         note: String?,
-        dateMillis: Long
+        dateMillis: Long,
+        receiptImagePath: String? = null,
+        isBill: Boolean = false,
+        dueDate: Long? = null,
+        isPaid: Boolean = true
     )
     suspend fun updateTransaction(
         id: String,
@@ -25,9 +29,14 @@ interface TransactionRepository {
         accountId: String,
         note: String?,
         dateMillis: Long,
-        createdAt: Long
+        createdAt: Long,
+        receiptImagePath: String? = null,
+        isBill: Boolean = false,
+        dueDate: Long? = null,
+        isPaid: Boolean = true
     )
     suspend fun deleteTransaction(transaction: Transaction)
+    suspend fun markBillAsPaid(transactionId: String)
 }
 
 interface CategoryRepository {

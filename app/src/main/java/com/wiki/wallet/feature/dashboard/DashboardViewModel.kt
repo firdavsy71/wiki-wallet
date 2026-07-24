@@ -45,6 +45,7 @@ sealed interface DashboardUiEvent {
     data object OnNavigateToHistory : DashboardUiEvent
     data object OnNavigateToCategories : DashboardUiEvent
     data object OnNavigateToSettings : DashboardUiEvent
+    data object OnNavigateToCalendar : DashboardUiEvent
 }
 
 class DashboardViewModel(

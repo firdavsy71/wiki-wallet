@@ -15,6 +15,7 @@ import com.wiki.wallet.domain.repository.CategoryRepository
 import com.wiki.wallet.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 
@@ -51,7 +52,11 @@ class TransactionRepositoryImpl(
                     date = entity.date,
                     createdAt = entity.createdAt,
                     isRecurring = entity.isRecurring,
-                    recurrenceRule = entity.recurrenceRule
+                    recurrenceRule = entity.recurrenceRule,
+                    receiptImagePath = entity.receiptImagePath,
+                    isBill = entity.isBill,
+                    dueDate = entity.dueDate,
+                    isPaid = entity.isPaid
                 )
             }
         }
@@ -72,7 +77,11 @@ class TransactionRepositoryImpl(
         categoryId: String,
         accountId: String,
         note: String?,
-        dateMillis: Long
+        dateMillis: Long,
+        receiptImagePath: String?,
+        isBill: Boolean,
+        dueDate: Long?,
+        isPaid: Boolean
     ) {
         val entity = TransactionEntity(
             id = UUID.randomUUID().toString(),
@@ -82,7 +91,11 @@ class TransactionRepositoryImpl(
             accountId = accountId,
             note = note,
             date = dateMillis,
-            createdAt = System.currentTimeMillis()
+            createdAt = System.currentTimeMillis(),
+            receiptImagePath = receiptImagePath,
+            isBill = isBill,
+            dueDate = dueDate,
+            isPaid = isPaid
         )
         transactionDao.insertTransaction(entity)
     }
@@ -95,7 +108,11 @@ class TransactionRepositoryImpl(
         accountId: String,
         note: String?,
         dateMillis: Long,
-        createdAt: Long
+        createdAt: Long,
+        receiptImagePath: String?,
+        isBill: Boolean,
+        dueDate: Long?,
+        isPaid: Boolean
     ) {
         val entity = TransactionEntity(
             id = id,
@@ -105,7 +122,11 @@ class TransactionRepositoryImpl(
             accountId = accountId,
             note = note,
             date = dateMillis,
-            createdAt = createdAt
+            createdAt = createdAt,
+            receiptImagePath = receiptImagePath,
+            isBill = isBill,
+            dueDate = dueDate,
+            isPaid = isPaid
         )
         transactionDao.insertTransaction(entity)
     }
@@ -119,9 +140,20 @@ class TransactionRepositoryImpl(
             accountId = transaction.accountId,
             note = transaction.note,
             date = transaction.date,
-            createdAt = transaction.createdAt
+            createdAt = transaction.createdAt,
+            receiptImagePath = transaction.receiptImagePath,
+            isBill = transaction.isBill,
+            dueDate = transaction.dueDate,
+            isPaid = transaction.isPaid
         )
         transactionDao.deleteTransaction(entity)
+    }
+
+    override suspend fun markBillAsPaid(transactionId: String) {
+        val txs = transactionDao.getAllTransactions()
+        val target = txs.firstOrNull { it.id == transactionId } ?: return
+        val updated = target.copy(isPaid = true)
+        transactionDao.insertTransaction(updated)
     }
 }
 
@@ -138,7 +170,8 @@ class CategoryRepositoryImpl(
                     type = entity.type,
                     iconKey = entity.iconKey,
                     colorToken = entity.colorToken,
-                    monthlyBudget = entity.monthlyBudget
+                    monthlyBudget = entity.monthlyBudget,
+                    parentCategoryId = entity.parentCategoryId
                 )
             }
         }
@@ -153,7 +186,8 @@ class CategoryRepositoryImpl(
                     type = entity.type,
                     iconKey = entity.iconKey,
                     colorToken = entity.colorToken,
-                    monthlyBudget = entity.monthlyBudget
+                    monthlyBudget = entity.monthlyBudget,
+                    parentCategoryId = entity.parentCategoryId
                 )
             }
         }
@@ -167,7 +201,8 @@ class CategoryRepositoryImpl(
                 type = category.type,
                 iconKey = category.iconKey,
                 colorToken = category.colorToken,
-                monthlyBudget = category.monthlyBudget
+                monthlyBudget = category.monthlyBudget,
+                parentCategoryId = category.parentCategoryId
             )
         )
     }
@@ -190,7 +225,7 @@ class AccountRepositoryImpl(
             accounts
                 .sortedBy { it.displayOrder }
                 .map { account ->
-                    val accountTxs = txs.filter { it.accountId == account.id }
+                    val accountTxs = txs.filter { it.accountId == account.id && it.isPaid }
                     val income = accountTxs.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
                     val expense = accountTxs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
                     val current = account.startingBalance + income - expense
@@ -202,7 +237,8 @@ class AccountRepositoryImpl(
                         currentBalance = current,
                         currency = account.currency,
                         iconKey = account.iconKey,
-                        displayOrder = account.displayOrder
+                        displayOrder = account.displayOrder,
+                        type = account.type
                     )
                 }
         }
@@ -216,7 +252,8 @@ class AccountRepositoryImpl(
                 startingBalance = account.startingBalance,
                 currency = account.currency,
                 iconKey = account.iconKey,
-                displayOrder = account.displayOrder
+                displayOrder = account.displayOrder,
+                type = account.type
             )
         )
     }
@@ -229,7 +266,8 @@ class AccountRepositoryImpl(
                 startingBalance = account.startingBalance,
                 currency = account.currency,
                 iconKey = account.iconKey,
-                displayOrder = account.displayOrder
+                displayOrder = account.displayOrder,
+                type = account.type
             )
         )
     }
@@ -242,7 +280,8 @@ class AccountRepositoryImpl(
                 startingBalance = account.startingBalance,
                 currency = account.currency,
                 iconKey = account.iconKey,
-                displayOrder = account.displayOrder
+                displayOrder = account.displayOrder,
+                type = account.type
             )
         )
     }
@@ -255,7 +294,8 @@ class AccountRepositoryImpl(
                 startingBalance = account.startingBalance,
                 currency = account.currency,
                 iconKey = account.iconKey,
-                displayOrder = index
+                displayOrder = index,
+                type = account.type
             )
         }
         accountDao.insertAccounts(updatedEntities)

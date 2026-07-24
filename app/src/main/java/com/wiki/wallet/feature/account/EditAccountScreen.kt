@@ -31,10 +31,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wiki.wallet.core.database.entity.AccountType
 import com.wiki.wallet.core.designsystem.components.PillButton
 import com.wiki.wallet.core.designsystem.components.PillButtonVariant
 import com.wiki.wallet.core.designsystem.theme.ThemeManager
@@ -135,6 +137,34 @@ fun EditAccountScreen(
                 )
 
                 Spacer(modifier = Modifier.width(44.dp))
+            }
+
+            // Account Type Selector Row
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(text = "Account Classification", style = WalletTypography.LabelM, color = WalletColors.TextMuted)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    AccountType.entries.forEach { type ->
+                        val isSelected = type == uiState.selectedType
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(WalletShapes.Pill)
+                                .background(if (isSelected) WalletColors.Coral else cardBg)
+                                .clickable { onEvent(EditAccountUiEvent.OnTypeSelected(type)) }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = type.name.lowercase().capitalize(),
+                                style = WalletTypography.LabelS,
+                                color = if (isSelected) Color.White else textColor
+                            )
+                        }
+                    }
+                }
             }
 
             // Icon Picker Row
@@ -262,3 +292,5 @@ fun EditAccountScreen(
         }
     }
 }
+
+private fun String.capitalize() = this.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }

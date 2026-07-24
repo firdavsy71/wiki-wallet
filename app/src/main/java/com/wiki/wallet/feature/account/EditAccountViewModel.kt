@@ -2,37 +2,39 @@ package com.wiki.wallet.feature.account
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wiki.wallet.core.database.entity.AccountType
 import com.wiki.wallet.domain.model.Account
 import com.wiki.wallet.domain.repository.AccountRepository
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
 data class EditAccountUiState(
-    val accountId: String? = null,
     val isEditMode: Boolean = false,
+    val accountId: String? = null,
     val nameText: String = "",
-    val startingBalanceText: String = "0.00",
+    val startingBalanceText: String = "",
     val selectedIcon: String = "💳",
-    val selectedCurrency: String = "USD",
-    val availableIcons: List<String> = listOf("💳", "💵", "🏦", "🪙", "💰", "📱", "💎", "⭐"),
-    val isExecuting: Boolean = false,
-    val isCtaEnabled: Boolean = false
-)
+    val selectedType: AccountType = AccountType.BANK,
+    val availableIcons: List<String> = listOf("💳", "🏦", "💵", "🏠", "🚗", "💼", "📈", "💎", "💳"),
+    val isExecuting: Boolean = false
+) {
+    val isCtaEnabled: Boolean
+        get() = nameText.isNotBlank() && startingBalanceText.toDoubleOrNull() != null
+}
 
 sealed interface EditAccountUiEvent {
-    data class OnNameChanged(val text: String) : EditAccountUiEvent
-    data class OnStartingBalanceChanged(val text: String) : EditAccountUiEvent
+    data class OnNameChanged(val name: String) : EditAccountUiEvent
+    data class OnStartingBalanceChanged(val balance: String) : EditAccountUiEvent
     data class OnIconSelected(val icon: String) : EditAccountUiEvent
-    data class OnCurrencySelected(val currency: String) : EditAccountUiEvent
+    data class OnTypeSelected(val type: AccountType) : EditAccountUiEvent
     data object OnSaveClicked : EditAccountUiEvent
     data object OnDeleteClicked : EditAccountUiEvent
     data object OnBackClicked : EditAccountUiEvent
@@ -49,118 +51,113 @@ class EditAccountViewModel(
     private val accountRepository: AccountRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(EditAccountUiState(accountId = accountId, isEditMode = accountId != null))
+    private val _uiState = MutableStateFlow(EditAccountUiState(isEditMode = accountId != null, accountId = accountId))
     val uiState: StateFlow<EditAccountUiState> = _uiState.asStateFlow()
 
-    private val _effectChannel = Channel<EditAccountUiEffect>()
-    val effect = _effectChannel.receiveAsFlow()
+    private val _effect = MutableSharedFlow<EditAccountUiEffect>()
+    val effect: SharedFlow<EditAccountUiEffect> = _effect.asSharedFlow()
 
     init {
         if (accountId != null) {
-            accountRepository.observeAllAccounts()
-                .onEach { accounts ->
-                    val acc = accounts.firstOrNull { it.id == accountId }
-                    if (acc != null) {
-                        _uiState.update { state ->
-                            state.copy(
-                                nameText = if (state.nameText.isEmpty()) acc.name else state.nameText,
-                                startingBalanceText = String.format(java.util.Locale.US, "%.2f", acc.startingBalance),
-                                selectedIcon = acc.iconKey,
-                                selectedCurrency = acc.currency
-                            )
-                        }
-                        validateForm()
+            viewModelScope.launch {
+                val accounts = accountRepository.observeAllAccounts().firstOrNull() ?: emptyList()
+                val target = accounts.firstOrNull { it.id == accountId }
+                if (target != null) {
+                    _uiState.update {
+                        it.copy(
+                            nameText = target.name,
+                            startingBalanceText = target.startingBalance.toString(),
+                            selectedIcon = target.iconKey,
+                            selectedType = target.type
+                        )
                     }
                 }
-                .launchIn(viewModelScope)
+            }
         }
     }
 
     fun onEvent(event: EditAccountUiEvent) {
         when (event) {
             is EditAccountUiEvent.OnNameChanged -> {
-                _uiState.update { it.copy(nameText = event.text) }
-                validateForm()
+                _uiState.update { it.copy(nameText = event.name) }
             }
             is EditAccountUiEvent.OnStartingBalanceChanged -> {
-                _uiState.update { it.copy(startingBalanceText = event.text) }
-                validateForm()
+                _uiState.update { it.copy(startingBalanceText = event.balance) }
             }
             is EditAccountUiEvent.OnIconSelected -> {
                 _uiState.update { it.copy(selectedIcon = event.icon) }
             }
-            is EditAccountUiEvent.OnCurrencySelected -> {
-                _uiState.update { it.copy(selectedCurrency = event.currency) }
+            is EditAccountUiEvent.OnTypeSelected -> {
+                _uiState.update { it.copy(selectedType = event.type) }
             }
-            EditAccountUiEvent.OnSaveClicked -> {
-                saveAccount()
-            }
-            EditAccountUiEvent.OnDeleteClicked -> {
-                deleteAccount()
-            }
+            EditAccountUiEvent.OnSaveClicked -> saveAccount()
+            EditAccountUiEvent.OnDeleteClicked -> deleteAccount()
             EditAccountUiEvent.OnBackClicked -> {}
         }
-    }
-
-    private fun validateForm() {
-        val state = _uiState.value
-        val isValid = state.nameText.isNotBlank() && state.startingBalanceText.toDoubleOrNull() != null
-        _uiState.update { it.copy(isCtaEnabled = isValid) }
     }
 
     private fun saveAccount() {
         val state = _uiState.value
         val name = state.nameText.trim()
-        val startingBal = state.startingBalanceText.toDoubleOrNull() ?: 0.0
+        val balance = state.startingBalanceText.toDoubleOrNull() ?: 0.0
 
-        if (name.isEmpty()) return
-
-        _uiState.update { it.copy(isExecuting = true, isCtaEnabled = false) }
+        if (name.isBlank()) {
+            viewModelScope.launch { _effect.emit(EditAccountUiEffect.Error("Account name cannot be empty.")) }
+            return
+        }
 
         viewModelScope.launch {
-            runCatching {
-                val account = Account(
-                    id = state.accountId ?: UUID.randomUUID().toString(),
-                    name = name,
-                    startingBalance = startingBal,
-                    currentBalance = startingBal,
-                    currency = state.selectedCurrency,
-                    iconKey = state.selectedIcon
-                )
-                if (state.isEditMode) {
-                    accountRepository.updateAccount(account)
+            _uiState.update { it.copy(isExecuting = true) }
+            try {
+                if (state.isEditMode && state.accountId != null) {
+                    val existing = accountRepository.observeAllAccounts().firstOrNull()?.firstOrNull { it.id == state.accountId }
+                    if (existing != null) {
+                        val updated = existing.copy(
+                            name = name,
+                            startingBalance = balance,
+                            iconKey = state.selectedIcon,
+                            type = state.selectedType
+                        )
+                        accountRepository.updateAccount(updated)
+                    }
                 } else {
-                    accountRepository.addAccount(account)
+                    val newAccount = Account(
+                        id = UUID.randomUUID().toString(),
+                        name = name,
+                        startingBalance = balance,
+                        currentBalance = balance,
+                        currency = "USD",
+                        iconKey = state.selectedIcon,
+                        displayOrder = 99,
+                        type = state.selectedType
+                    )
+                    accountRepository.addAccount(newAccount)
                 }
-            }.onSuccess {
-                _uiState.update { it.copy(isExecuting = false, isCtaEnabled = true) }
-                _effectChannel.send(EditAccountUiEffect.SaveSuccess)
-            }.onFailure { err ->
-                _uiState.update { it.copy(isExecuting = false, isCtaEnabled = true) }
-                _effectChannel.send(EditAccountUiEffect.Error(err.message ?: "Failed to save account"))
+                _effect.emit(EditAccountUiEffect.SaveSuccess)
+            } catch (e: Exception) {
+                _effect.emit(EditAccountUiEffect.Error(e.message ?: "Failed to save account."))
+            } finally {
+                _uiState.update { it.copy(isExecuting = false) }
             }
         }
     }
 
     private fun deleteAccount() {
-        val id = _uiState.value.accountId ?: return
-        _uiState.update { it.copy(isExecuting = true, isCtaEnabled = false) }
+        val state = _uiState.value
+        if (!state.isEditMode || state.accountId == null) return
 
         viewModelScope.launch {
-            runCatching {
-                val account = Account(
-                    id = id,
-                    name = _uiState.value.nameText,
-                    startingBalance = 0.0,
-                    currentBalance = 0.0
-                )
-                accountRepository.deleteAccount(account)
-            }.onSuccess {
-                _uiState.update { it.copy(isExecuting = false, isCtaEnabled = true) }
-                _effectChannel.send(EditAccountUiEffect.DeleteSuccess)
-            }.onFailure { err ->
-                _uiState.update { it.copy(isExecuting = false, isCtaEnabled = true) }
-                _effectChannel.send(EditAccountUiEffect.Error(err.message ?: "Failed to delete account"))
+            _uiState.update { it.copy(isExecuting = true) }
+            try {
+                val existing = accountRepository.observeAllAccounts().firstOrNull()?.firstOrNull { it.id == state.accountId }
+                if (existing != null) {
+                    accountRepository.deleteAccount(existing)
+                    _effect.emit(EditAccountUiEffect.DeleteSuccess)
+                }
+            } catch (e: Exception) {
+                _effect.emit(EditAccountUiEffect.Error(e.message ?: "Failed to delete account."))
+            } finally {
+                _uiState.update { it.copy(isExecuting = false) }
             }
         }
     }

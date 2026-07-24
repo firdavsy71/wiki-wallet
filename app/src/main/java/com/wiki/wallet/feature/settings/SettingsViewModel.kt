@@ -6,82 +6,42 @@ import androidx.lifecycle.viewModelScope
 import com.wiki.wallet.core.database.WalletDatabase
 import com.wiki.wallet.core.designsystem.theme.ThemeManager
 import com.wiki.wallet.core.util.CurrencyManager
-import com.wiki.wallet.domain.model.Account
+import com.wiki.wallet.domain.model.CurrencyItem
 import com.wiki.wallet.domain.repository.AccountRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-data class CurrencyItem(
-    val code: String,
-    val name: String,
-    val symbol: String,
-    val flag: String
-)
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class SettingsUiState(
     val selectedCurrency: String = "USD",
-    val searchQuery: String = "",
+    val currencies: List<CurrencyItem> = CurrencyManager.availableCurrencies,
     val isCurrencyPickerOpen: Boolean = false,
-    val isResetDialogOpen: Boolean = false,
+    val searchQuery: String = "",
+    val selectedTheme: String = "Dark Ink",
     val isSecurityLockEnabled: Boolean = false,
     val isDailyReminderEnabled: Boolean = true,
-    val selectedTheme: String = "Dark Ink",
-    val accounts: List<Account> = emptyList(),
-    val appVersion: String = "1.2.3",
-    val currencies: List<CurrencyItem> = listOf(
-        CurrencyItem("USD", "United States Dollar", "$", "🇺🇸"),
-        CurrencyItem("EUR", "Euro", "€", "🇪🇺"),
-        CurrencyItem("GBP", "British Pound", "£", "🇬🇧"),
-        CurrencyItem("JPY", "Japanese Yen", "¥", "🇯🇵"),
-        CurrencyItem("AUD", "Australian Dollar", "$", "🇦🇺"),
-        CurrencyItem("CAD", "Canadian Dollar", "$", "🇨🇦"),
-        CurrencyItem("CHF", "Swiss Franc", "CHF", "🇨🇭"),
-        CurrencyItem("CNY", "Chinese Yuan", "¥", "🇨🇳"),
-        CurrencyItem("HKD", "Hong Kong Dollar", "$", "🇭🇰"),
-        CurrencyItem("NZD", "New Zealand Dollar", "$", "🇳🇿"),
-        CurrencyItem("SEK", "Swedish Krona", "kr", "🇸🇪"),
-        CurrencyItem("KRW", "South Korean Won", "₩", "🇰🇷"),
-        CurrencyItem("SGD", "Singapore Dollar", "$", "🇸🇬"),
-        CurrencyItem("NOK", "Norwegian Krone", "kr", "🇳🇴"),
-        CurrencyItem("MXN", "Mexican Peso", "$", "🇲🇽"),
-        CurrencyItem("INR", "Indian Rupee", "₹", "🇮🇳"),
-        CurrencyItem("RUB", "Russian Ruble", "₽", "🇷🇺"),
-        CurrencyItem("BRL", "Brazilian Real", "R$", "🇧🇷"),
-        CurrencyItem("ZAR", "South African Rand", "R", "🇿🇦"),
-        CurrencyItem("TRY", "Turkish Lira", "₺", "🇹🇷"),
-        CurrencyItem("TWD", "New Taiwan Dollar", "NT$", "🇹🇼"),
-        CurrencyItem("AED", "United Arab Emirates Dirham", "AED", "🇦🇪"),
-        CurrencyItem("SAR", "Saudi Riyal", "SAR", "🇸🇦"),
-        CurrencyItem("THB", "Thai Baht", "฿", "🇹🇭"),
-        CurrencyItem("IDR", "Indonesian Rupiah", "Rp", "🇮🇩"),
-        CurrencyItem("MYR", "Malaysian Ringgit", "RM", "🇲🇾"),
-        CurrencyItem("PHP", "Philippine Peso", "₱", "🇵🇭"),
-        CurrencyItem("VND", "Vietnamese Dong", "₫", "🇻🇳"),
-        CurrencyItem("PLN", "Polish Zloty", "zł", "🇵🇱"),
-        CurrencyItem("EGP", "Egyptian Pound", "EGP", "🇪🇬"),
-        CurrencyItem("PKR", "Pakistani Rupee", "Rs", "🇵🇰"),
-        CurrencyItem("BDT", "Bangladeshi Taka", "৳", "🇧🇩"),
-        CurrencyItem("NGN", "Nigerian Naira", "₦", "🇳🇬"),
-        CurrencyItem("UAH", "Ukrainian Hryvnia", "₴", "🇺🇦"),
-        CurrencyItem("UZS", "Uzbekistani Som", "so'm", "🇺🇿"),
-        CurrencyItem("KZT", "Kazakhstani Tenge", "₸", "🇰🇿")
-    )
+    val isResetDialogOpen: Boolean = false,
+    val exportStatusMessage: String? = null,
+    val appVersion: String = "2.0.0"
 )
 
 sealed interface SettingsUiEvent {
-    data class OnSearchQueryChanged(val query: String) : SettingsUiEvent
     data class OnCurrencySelected(val currencyCode: String) : SettingsUiEvent
     data class OnCurrencyPickerToggle(val isOpen: Boolean) : SettingsUiEvent
-    data class OnThemeSelected(val theme: String) : SettingsUiEvent
+    data class OnSearchQueryChanged(val query: String) : SettingsUiEvent
+    data class OnThemeSelected(val themeMode: String) : SettingsUiEvent
     data class OnSecurityLockToggle(val enabled: Boolean) : SettingsUiEvent
     data class OnDailyReminderToggle(val enabled: Boolean) : SettingsUiEvent
     data class OnResetDialogToggle(val isOpen: Boolean) : SettingsUiEvent
+    data object OnExportCsvClicked : SettingsUiEvent
     data object OnConfirmResetData : SettingsUiEvent
     data object OnBackClicked : SettingsUiEvent
 }
@@ -92,70 +52,93 @@ class SettingsViewModel(
     private val walletDatabase: WalletDatabase
 ) : ViewModel() {
 
+    private val prefs = context.getSharedPreferences("apexbudget_prefs", Context.MODE_PRIVATE)
+
     private val _uiState = MutableStateFlow(
         SettingsUiState(
-            selectedCurrency = CurrencyManager.currentCurrencyCode.value,
-            selectedTheme = ThemeManager.themeMode.value
+            selectedCurrency = CurrencyManager.getCurrentCurrencyCode(context),
+            selectedTheme = prefs.getString("app_theme_mode", "Dark Ink") ?: "Dark Ink",
+            isSecurityLockEnabled = prefs.getBoolean("security_lock_enabled", false),
+            isDailyReminderEnabled = prefs.getBoolean("daily_reminder_enabled", true)
         )
     )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
-    init {
-        combine(
-            CurrencyManager.currentCurrencyCode,
-            ThemeManager.themeMode,
-            accountRepository.observeAllAccounts()
-        ) { currencyCode, themeMode, accounts ->
-            _uiState.update {
-                it.copy(
-                    selectedCurrency = currencyCode,
-                    selectedTheme = themeMode,
-                    accounts = accounts
-                )
-            }
-        }.launchIn(viewModelScope)
-    }
-
     fun onEvent(event: SettingsUiEvent) {
         when (event) {
-            is SettingsUiEvent.OnSearchQueryChanged -> {
-                _uiState.update { it.copy(searchQuery = event.query) }
-            }
             is SettingsUiEvent.OnCurrencySelected -> {
-                CurrencyManager.setCurrency(context, event.currencyCode)
-                _uiState.update {
-                    it.copy(
-                        selectedCurrency = event.currencyCode,
-                        isCurrencyPickerOpen = false
-                    )
-                }
+                CurrencyManager.setCurrencyCode(context, event.currencyCode)
+                _uiState.update { it.copy(selectedCurrency = event.currencyCode, isCurrencyPickerOpen = false) }
             }
             is SettingsUiEvent.OnCurrencyPickerToggle -> {
                 _uiState.update { it.copy(isCurrencyPickerOpen = event.isOpen) }
             }
+            is SettingsUiEvent.OnSearchQueryChanged -> {
+                _uiState.update { it.copy(searchQuery = event.query) }
+            }
             is SettingsUiEvent.OnThemeSelected -> {
-                ThemeManager.setThemeMode(context, event.theme)
-                _uiState.update { it.copy(selectedTheme = event.theme) }
+                ThemeManager.setThemeMode(context, event.themeMode)
+                _uiState.update { it.copy(selectedTheme = event.themeMode) }
             }
             is SettingsUiEvent.OnSecurityLockToggle -> {
+                prefs.edit().putBoolean("security_lock_enabled", event.enabled).apply()
                 _uiState.update { it.copy(isSecurityLockEnabled = event.enabled) }
             }
             is SettingsUiEvent.OnDailyReminderToggle -> {
+                prefs.edit().putBoolean("daily_reminder_enabled", event.enabled).apply()
                 _uiState.update { it.copy(isDailyReminderEnabled = event.enabled) }
             }
             is SettingsUiEvent.OnResetDialogToggle -> {
                 _uiState.update { it.copy(isResetDialogOpen = event.isOpen) }
             }
-            SettingsUiEvent.OnConfirmResetData -> {
-                resetDatabase()
-            }
+            SettingsUiEvent.OnExportCsvClicked -> exportTransactionsCsv()
+            SettingsUiEvent.OnConfirmResetData -> clearAllData()
             SettingsUiEvent.OnBackClicked -> {}
         }
     }
 
-    private fun resetDatabase() {
+    private fun exportTransactionsCsv() {
         viewModelScope.launch(Dispatchers.IO) {
-            walletDatabase.clearAllTables()
+            try {
+                val txs = walletDatabase.transactionDao().getAllTransactions()
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                val csvBuilder = StringBuilder()
+                csvBuilder.append("ID,Amount,Type,CategoryId,AccountId,Note,Date,IsPaid\n")
+
+                txs.forEach { tx ->
+                    val dateStr = dateFormat.format(Date(tx.date))
+                    csvBuilder.append("${tx.id},${tx.amount},${tx.type},${tx.categoryId},${tx.accountId},\"${tx.note ?: ""}\",\"$dateStr\",${tx.isPaid}\n")
+                }
+
+                val exportFile = File(context.getExternalFilesDir(null), "ApexBudget_Export_${System.currentTimeMillis()}.csv")
+                exportFile.writeText(csvBuilder.toString())
+
+                _uiState.update { it.copy(exportStatusMessage = "CSV exported to: ${exportFile.name}") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(exportStatusMessage = "Export failed: ${e.message}") }
+            }
+        }
+    }
+
+    private fun clearAllData() {
+        viewModelScope.launch(Dispatchers.IO) {
+            walletDatabase.transactionDao().deleteAllTransactions()
+            val accounts = accountRepository.observeAllAccounts().firstOrNull() ?: emptyList()
+            accounts.forEach { accountRepository.deleteAccount(it) }
+
+            accountRepository.addAccount(
+                com.wiki.wallet.domain.model.Account(
+                    id = "acc_card",
+                    name = "Main Card",
+                    startingBalance = 0.0,
+                    currentBalance = 0.0,
+                    currency = "USD",
+                    iconKey = "💳",
+                    displayOrder = 0,
+                    type = com.wiki.wallet.core.database.entity.AccountType.BANK
+                )
+            )
+
             _uiState.update { it.copy(isResetDialogOpen = false) }
         }
     }

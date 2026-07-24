@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
@@ -69,6 +70,7 @@ fun DashboardRoute(
     onNavigateToCategories: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToProfile: () -> Unit,
+    onNavigateToCalendar: () -> Unit,
     onNavigateToAccountDetail: (String) -> Unit,
     onNavigateToEditTransaction: (String) -> Unit,
     onNavigateToAddAccount: () -> Unit,
@@ -85,6 +87,7 @@ fun DashboardRoute(
                 DashboardUiEvent.OnNavigateToHistory -> onNavigateToHistory()
                 DashboardUiEvent.OnNavigateToCategories -> onNavigateToCategories()
                 DashboardUiEvent.OnNavigateToSettings -> onNavigateToSettings()
+                DashboardUiEvent.OnNavigateToCalendar -> onNavigateToCalendar()
                 is DashboardUiEvent.OnAccountClick -> onNavigateToAccountDetail(event.accountId)
                 is DashboardUiEvent.OnTransactionClick -> onNavigateToEditTransaction(event.transactionId)
                 else -> viewModel.onEvent(event)
@@ -158,6 +161,13 @@ fun DashboardScreen(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    HeaderIconButton(
+                        icon = Icons.Default.CalendarMonth,
+                        contentDescription = "Bill Calendar",
+                        onClick = { onEvent(DashboardUiEvent.OnNavigateToCalendar) },
+                        containerColor = cardBg,
+                        tintColor = textColor
+                    )
                     HeaderIconButton(
                         icon = Icons.Default.Category,
                         contentDescription = "Categories & Budgets",

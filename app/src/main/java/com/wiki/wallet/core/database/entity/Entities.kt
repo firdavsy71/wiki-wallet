@@ -7,6 +7,10 @@ enum class TransactionType {
     INCOME, EXPENSE
 }
 
+enum class AccountType {
+    BANK, CASH, CREDIT_CARD, ASSET, DEBT
+}
+
 @Entity(tableName = "transactions")
 data class TransactionEntity(
     @PrimaryKey val id: String,
@@ -18,7 +22,11 @@ data class TransactionEntity(
     val date: Long,               // epoch millis
     val createdAt: Long,
     val isRecurring: Boolean = false,
-    val recurrenceRule: String? = null // RRULE-style string, nullable
+    val recurrenceRule: String? = null, // RRULE-style string, nullable
+    val receiptImagePath: String? = null,
+    val isBill: Boolean = false,
+    val dueDate: Long? = null,
+    val isPaid: Boolean = true
 )
 
 @Entity(tableName = "categories")
@@ -28,7 +36,8 @@ data class CategoryEntity(
     val type: TransactionType,
     val iconKey: String,          // e.g. "🍔", "🚗", "🏠", "💼"
     val colorToken: String,       // WalletColors token name: "Coral", "MintChip", etc.
-    val monthlyBudget: Double? = null // null = no budget set for this category
+    val monthlyBudget: Double? = null, // null = no budget set for this category
+    val parentCategoryId: String? = null
 )
 
 @Entity(tableName = "accounts")
@@ -38,5 +47,6 @@ data class AccountEntity(
     val startingBalance: Double,
     val currency: String = "USD", // ISO 4217, default USD
     val iconKey: String = "💳",
-    val displayOrder: Int = 0
+    val displayOrder: Int = 0,
+    val type: AccountType = AccountType.BANK
 )

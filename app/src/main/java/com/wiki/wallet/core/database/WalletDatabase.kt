@@ -9,6 +9,7 @@ import com.wiki.wallet.core.database.dao.AccountDao
 import com.wiki.wallet.core.database.dao.CategoryDao
 import com.wiki.wallet.core.database.dao.TransactionDao
 import com.wiki.wallet.core.database.entity.AccountEntity
+import com.wiki.wallet.core.database.entity.AccountType
 import com.wiki.wallet.core.database.entity.CategoryEntity
 import com.wiki.wallet.core.database.entity.TransactionEntity
 import com.wiki.wallet.core.database.entity.TransactionType
@@ -22,7 +23,7 @@ import kotlinx.coroutines.launch
         CategoryEntity::class,
         AccountEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class WalletDatabase : RoomDatabase() {
@@ -68,7 +69,9 @@ private suspend fun seedInitialData(db: WalletDatabase) {
             name = "Main Card",
             startingBalance = 0.0,
             currency = "USD",
-            iconKey = "💳"
+            iconKey = "💳",
+            displayOrder = 0,
+            type = AccountType.BANK
         )
     )
     db.accountDao().insertAccounts(defaultAccounts)

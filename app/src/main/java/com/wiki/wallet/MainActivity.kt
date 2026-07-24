@@ -352,6 +352,9 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToEditAccount = { accId ->
                                     navController.navigate("edit_account/$accId")
                                 },
+                                onNavigateToAddTransaction = {
+                                    navController.navigate("add_transaction")
+                                },
                                 viewModel = viewModel
                             )
                         }

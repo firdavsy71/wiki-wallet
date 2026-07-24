@@ -19,7 +19,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,9 +29,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wiki.wallet.core.designsystem.components.SuperscriptAmount
+import com.wiki.wallet.core.designsystem.theme.ThemeManager
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
@@ -41,6 +45,7 @@ fun AccountDetailRoute(
     onNavigateBack: () -> Unit,
     onNavigateToEditTransaction: (String) -> Unit,
     onNavigateToEditAccount: (String) -> Unit,
+    onNavigateToAddTransaction: () -> Unit,
     viewModel: AccountDetailViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -57,6 +62,7 @@ fun AccountDetailRoute(
         },
         onTransactionClick = onNavigateToEditTransaction,
         onEditAccountClick = { uiState.account?.id?.let { onNavigateToEditAccount(it) } },
+        onAddTransactionClick = onNavigateToAddTransaction,
         modifier = modifier
     )
 }
@@ -67,14 +73,19 @@ fun AccountDetailScreen(
     onEvent: (AccountDetailUiEvent) -> Unit,
     onTransactionClick: (String) -> Unit,
     onEditAccountClick: () -> Unit,
+    onAddTransactionClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val account = uiState.account
+    val bgColor = ThemeManager.backgroundColor
+    val cardBg = ThemeManager.cardColor
+    val textColor = ThemeManager.textColorPrimary
+    val borderColor = ThemeManager.cardBorderColor
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(WalletColors.PaperPure)
+            .background(bgColor)
     ) {
         Column(
             modifier = Modifier
@@ -93,14 +104,14 @@ fun AccountDetailScreen(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(WalletShapes.Pill)
-                        .background(WalletColors.Paper)
+                        .background(cardBg)
                         .clickable { onEvent(AccountDetailUiEvent.OnBackClicked) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = WalletColors.Ink,
+                        tint = textColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -108,21 +119,21 @@ fun AccountDetailScreen(
                 Text(
                     text = account?.name ?: "Account Details",
                     style = WalletTypography.TitleM,
-                    color = WalletColors.TextPrimary
+                    color = textColor
                 )
 
                 Box(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .background(WalletColors.Paper)
+                        .background(cardBg)
                         .clickable { onEditAccountClick() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Edit Account",
-                        tint = WalletColors.Ink,
+                        tint = textColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -191,7 +202,7 @@ fun AccountDetailScreen(
             Text(
                 text = "Account Activity (${uiState.transactions.size})",
                 style = WalletTypography.TitleM,
-                color = WalletColors.TextPrimary
+                color = textColor
             )
 
             // Transactions List
@@ -215,11 +226,32 @@ fun AccountDetailScreen(
                     items(uiState.transactions) { tx ->
                         TransactionRowItem(
                             transaction = tx,
-                            onClick = { onTransactionClick(tx.id) }
+                            onClick = { onTransactionClick(tx.id) },
+                            cardBg = cardBg,
+                            textColor = textColor,
+                            borderColor = borderColor
                         )
                     }
                 }
             }
+        }
+
+        // Floating Action Button to add transaction for this account
+        FloatingActionButton(
+            onClick = onAddTransactionClick,
+            containerColor = WalletColors.Coral,
+            contentColor = Color.White,
+            shape = CircleShape,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+                .size(56.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Add Transaction",
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }

@@ -15,36 +15,42 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Reorder
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wiki.wallet.core.database.entity.TransactionType
 import com.wiki.wallet.core.designsystem.components.DeltaChip
 import com.wiki.wallet.core.designsystem.components.IncomeBarChart
 import com.wiki.wallet.core.designsystem.components.SuperscriptAmount
+import com.wiki.wallet.core.designsystem.theme.ThemeManager
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
@@ -90,6 +96,7 @@ fun DashboardRoute(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     uiState: DashboardUiState,
@@ -98,10 +105,16 @@ fun DashboardScreen(
     onNavigateToAddAccount: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDark by ThemeManager.isDarkTheme.collectAsStateWithLifecycle()
+    val bgColor = ThemeManager.backgroundColor
+    val cardBg = ThemeManager.cardColor
+    val textColor = ThemeManager.textColorPrimary
+    val borderColor = ThemeManager.cardBorderColor
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(WalletColors.PaperPure)
+            .background(bgColor)
     ) {
         Column(
             modifier = Modifier
@@ -124,14 +137,16 @@ fun DashboardScreen(
                     HeaderIconButton(
                         icon = Icons.Default.Person,
                         contentDescription = "Profile",
-                        onClick = onNavigateToProfile
+                        onClick = onNavigateToProfile,
+                        containerColor = cardBg,
+                        tintColor = textColor
                     )
 
                     Column {
                         Text(
                             text = "${uiState.userName} 👋",
                             style = WalletTypography.TitleM,
-                            color = WalletColors.TextPrimary
+                            color = textColor
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
@@ -146,17 +161,23 @@ fun DashboardScreen(
                     HeaderIconButton(
                         icon = Icons.Default.Category,
                         contentDescription = "Categories & Budgets",
-                        onClick = { onEvent(DashboardUiEvent.OnNavigateToCategories) }
+                        onClick = { onEvent(DashboardUiEvent.OnNavigateToCategories) },
+                        containerColor = cardBg,
+                        tintColor = textColor
                     )
                     HeaderIconButton(
                         icon = Icons.Default.History,
                         contentDescription = "Transaction History",
-                        onClick = { onEvent(DashboardUiEvent.OnNavigateToHistory) }
+                        onClick = { onEvent(DashboardUiEvent.OnNavigateToHistory) },
+                        containerColor = cardBg,
+                        tintColor = textColor
                     )
                     HeaderIconButton(
                         icon = Icons.Default.Settings,
                         contentDescription = "Settings",
-                        onClick = { onEvent(DashboardUiEvent.OnNavigateToSettings) }
+                        onClick = { onEvent(DashboardUiEvent.OnNavigateToSettings) },
+                        containerColor = cardBg,
+                        tintColor = textColor
                     )
                 }
             }
@@ -166,7 +187,7 @@ fun DashboardScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(WalletShapes.CardLarge)
-                    .background(WalletColors.Ink)
+                    .background(if (isDark) WalletColors.Ink else WalletColors.Ink)
                     .padding(20.dp)
             ) {
                 Column(
@@ -223,7 +244,7 @@ fun DashboardScreen(
                 }
             }
 
-            // Accounts Carousel Section with Reorder Controls
+            // Accounts Carousel Section
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -233,41 +254,65 @@ fun DashboardScreen(
                     Text(
                         text = "My Accounts",
                         style = WalletTypography.TitleM,
-                        color = WalletColors.TextPrimary
+                        color = textColor
                     )
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier
-                            .clickable { onNavigateToAddAccount() }
-                            .padding(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Manage Accounts",
-                            tint = WalletColors.Coral,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "Manage",
-                            style = WalletTypography.LabelM,
-                            color = WalletColors.Coral
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            modifier = Modifier
+                                .clickable { onEvent(DashboardUiEvent.OnReorderModalToggle(true)) }
+                                .padding(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Reorder,
+                                contentDescription = "Reorder",
+                                tint = WalletColors.Coral,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Reorder",
+                                style = WalletTypography.LabelM,
+                                color = WalletColors.Coral
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            modifier = Modifier
+                                .clickable { onNavigateToAddAccount() }
+                                .padding(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Manage Accounts",
+                                tint = WalletColors.Coral,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Manage",
+                                style = WalletTypography.LabelM,
+                                color = WalletColors.Coral
+                            )
+                        }
                     }
                 }
 
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    itemsIndexed(uiState.accounts) { index, account ->
+                    items(uiState.accounts) { account ->
                         AccountBalanceCard(
                             account = account,
-                            canMoveLeft = index > 0,
-                            canMoveRight = index < uiState.accounts.lastIndex,
                             onClick = { onEvent(DashboardUiEvent.OnAccountClick(account.id)) },
-                            onMoveLeft = { onEvent(DashboardUiEvent.OnMoveAccountLeft(account.id)) },
-                            onMoveRight = { onEvent(DashboardUiEvent.OnMoveAccountRight(account.id)) }
+                            cardBg = cardBg,
+                            textColor = textColor,
+                            borderColor = borderColor
                         )
                     }
                 }
@@ -288,6 +333,9 @@ fun DashboardScreen(
                     title = "Income",
                     amount = uiState.periodIncomeText,
                     accentColor = WalletColors.MintChip,
+                    cardBg = cardBg,
+                    textColor = textColor,
+                    borderColor = borderColor,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -295,6 +343,9 @@ fun DashboardScreen(
                     title = "Expenses",
                     amount = uiState.periodExpenseText,
                     accentColor = WalletColors.Coral,
+                    cardBg = cardBg,
+                    textColor = textColor,
+                    borderColor = borderColor,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -310,7 +361,7 @@ fun DashboardScreen(
                 Text(
                     text = "Recent Transactions",
                     style = WalletTypography.TitleM,
-                    color = WalletColors.TextPrimary
+                    color = textColor
                 )
                 Text(
                     text = "See All",
@@ -339,7 +390,10 @@ fun DashboardScreen(
                     uiState.recentTransactions.forEach { tx ->
                         TransactionRowItem(
                             transaction = tx,
-                            onClick = { onEvent(DashboardUiEvent.OnTransactionClick(tx.id)) }
+                            onClick = { onEvent(DashboardUiEvent.OnTransactionClick(tx.id)) },
+                            cardBg = cardBg,
+                            textColor = textColor,
+                            borderColor = borderColor
                         )
                     }
                 }
@@ -365,26 +419,110 @@ fun DashboardScreen(
             )
         }
     }
+
+    // Modal Bottom Sheet for Vertical Account Reordering
+    if (uiState.isReorderModalOpen) {
+        ModalBottomSheet(
+            onDismissRequest = { onEvent(DashboardUiEvent.OnReorderModalToggle(false)) },
+            sheetState = rememberModalBottomSheetState(),
+            containerColor = cardBg
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = "Reorder Accounts Order",
+                    style = WalletTypography.TitleM,
+                    color = textColor
+                )
+
+                LazyColumn(
+                    modifier = Modifier.height(300.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    itemsIndexed(uiState.accounts) { index, account ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(WalletShapes.CardMedium)
+                                .background(bgColor)
+                                .border(1.dp, borderColor, WalletShapes.CardMedium)
+                                .padding(14.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Text(text = account.iconKey, style = WalletTypography.TitleM)
+                                    Column {
+                                        Text(text = account.name, style = WalletTypography.TitleM, color = textColor)
+                                        Text(text = CurrencyManager.format(account.currentBalance), style = WalletTypography.LabelS, color = WalletColors.TextMuted)
+                                    }
+                                }
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    if (index > 0) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(cardBg)
+                                                .clickable { onEvent(DashboardUiEvent.OnMoveAccountUp(account.id)) },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(imageVector = Icons.Default.ArrowUpward, contentDescription = "Up", tint = textColor, modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                    if (index < uiState.accounts.lastIndex) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(cardBg)
+                                                .clickable { onEvent(DashboardUiEvent.OnMoveAccountDown(account.id)) },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(imageVector = Icons.Default.ArrowDownward, contentDescription = "Down", tint = textColor, modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
 private fun HeaderIconButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    containerColor: Color,
+    tintColor: Color
 ) {
     Box(
         modifier = Modifier
             .size(40.dp)
             .clip(CircleShape)
-            .background(WalletColors.Paper)
+            .background(containerColor)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = WalletColors.Ink,
+            tint = tintColor,
             modifier = Modifier.size(20.dp)
         )
     }
@@ -393,19 +531,18 @@ private fun HeaderIconButton(
 @Composable
 private fun AccountBalanceCard(
     account: Account,
-    canMoveLeft: Boolean,
-    canMoveRight: Boolean,
     onClick: () -> Unit,
-    onMoveLeft: () -> Unit,
-    onMoveRight: () -> Unit,
+    cardBg: Color,
+    textColor: Color,
+    borderColor: Color,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
-            .width(170.dp)
+            .width(160.dp)
             .clip(WalletShapes.CardMedium)
-            .background(WalletColors.Paper)
-            .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+            .background(cardBg)
+            .border(1.dp, borderColor, WalletShapes.CardMedium)
             .clickable { onClick() }
             .padding(14.dp)
     ) {
@@ -415,30 +552,7 @@ private fun AccountBalanceCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(text = account.iconKey, style = WalletTypography.TitleM)
-                    if (canMoveLeft) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Move Left",
-                            tint = WalletColors.TextMuted,
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clickable { onMoveLeft() }
-                        )
-                    }
-                    if (canMoveRight) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Move Right",
-                            tint = WalletColors.TextMuted,
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clickable { onMoveRight() }
-                        )
-                    }
-                }
-
+                Text(text = account.iconKey, style = WalletTypography.TitleM)
                 Box(
                     modifier = Modifier
                         .clip(WalletShapes.Pill)
@@ -463,7 +577,7 @@ private fun AccountBalanceCard(
             Text(
                 text = CurrencyManager.format(account.currentBalance),
                 style = WalletTypography.TitleM,
-                color = WalletColors.TextPrimary
+                color = textColor
             )
         }
     }
@@ -495,13 +609,16 @@ private fun StatCard(
     title: String,
     amount: String,
     accentColor: Color,
+    cardBg: Color,
+    textColor: Color,
+    borderColor: Color,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .clip(WalletShapes.CardMedium)
-            .background(WalletColors.Paper)
-            .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+            .background(cardBg)
+            .border(1.dp, borderColor, WalletShapes.CardMedium)
             .padding(14.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -522,7 +639,7 @@ private fun StatCard(
             Text(
                 text = amount,
                 style = WalletTypography.TitleM,
-                color = WalletColors.TextPrimary
+                color = textColor
             )
         }
     }
@@ -532,6 +649,9 @@ private fun StatCard(
 fun TransactionRowItem(
     transaction: Transaction,
     onClick: (() -> Unit)? = null,
+    cardBg: Color = WalletColors.PaperPure,
+    textColor: Color = WalletColors.TextPrimary,
+    borderColor: Color = WalletColors.CardBorder,
     modifier: Modifier = Modifier
 ) {
     val isIncome = transaction.type == TransactionType.INCOME
@@ -545,8 +665,8 @@ fun TransactionRowItem(
         modifier = modifier
             .fillMaxWidth()
             .clip(WalletShapes.CardMedium)
-            .background(WalletColors.PaperPure)
-            .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+            .background(cardBg)
+            .border(1.dp, borderColor, WalletShapes.CardMedium)
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .padding(14.dp)
     ) {
@@ -579,7 +699,7 @@ fun TransactionRowItem(
                     Text(
                         text = transaction.categoryName,
                         style = WalletTypography.TitleM,
-                        color = WalletColors.TextPrimary
+                        color = textColor
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(

@@ -30,14 +30,16 @@ data class DashboardUiState(
     val chartItems: List<BarChartItem> = emptyList(),
     val accounts: List<Account> = emptyList(),
     val recentTransactions: List<Transaction> = emptyList(),
+    val isReorderModalOpen: Boolean = false,
     val isLoading: Boolean = false
 )
 
 sealed interface DashboardUiEvent {
     data class OnPeriodSelected(val period: TimePeriod) : DashboardUiEvent
     data class OnAccountClick(val accountId: String) : DashboardUiEvent
-    data class OnMoveAccountLeft(val accountId: String) : DashboardUiEvent
-    data class OnMoveAccountRight(val accountId: String) : DashboardUiEvent
+    data class OnMoveAccountUp(val accountId: String) : DashboardUiEvent
+    data class OnMoveAccountDown(val accountId: String) : DashboardUiEvent
+    data class OnReorderModalToggle(val isOpen: Boolean) : DashboardUiEvent
     data class OnTransactionClick(val transactionId: String) : DashboardUiEvent
     data object OnNavigateToAddTransaction : DashboardUiEvent
     data object OnNavigateToHistory : DashboardUiEvent
@@ -98,10 +100,13 @@ class DashboardViewModel(
             is DashboardUiEvent.OnPeriodSelected -> {
                 _selectedPeriod.value = event.period
             }
-            is DashboardUiEvent.OnMoveAccountLeft -> {
+            is DashboardUiEvent.OnReorderModalToggle -> {
+                _uiState.update { it.copy(isReorderModalOpen = event.isOpen) }
+            }
+            is DashboardUiEvent.OnMoveAccountUp -> {
                 moveAccount(event.accountId, -1)
             }
-            is DashboardUiEvent.OnMoveAccountRight -> {
+            is DashboardUiEvent.OnMoveAccountDown -> {
                 moveAccount(event.accountId, 1)
             }
             else -> {}

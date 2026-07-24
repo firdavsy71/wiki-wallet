@@ -31,13 +31,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wiki.wallet.core.designsystem.components.PillButton
 import com.wiki.wallet.core.designsystem.components.PillButtonVariant
+import com.wiki.wallet.core.designsystem.theme.ThemeManager
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
@@ -88,10 +88,15 @@ fun EditAccountScreen(
     onEvent: (EditAccountUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val bgColor = ThemeManager.backgroundColor
+    val cardBg = ThemeManager.cardColor
+    val textColor = ThemeManager.textColorPrimary
+    val borderColor = ThemeManager.cardBorderColor
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(WalletColors.PaperPure)
+            .background(bgColor)
     ) {
         Column(
             modifier = Modifier
@@ -111,14 +116,14 @@ fun EditAccountScreen(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(WalletShapes.Pill)
-                        .background(WalletColors.Paper)
+                        .background(cardBg)
                         .clickable { onEvent(EditAccountUiEvent.OnBackClicked) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = WalletColors.Ink,
+                        tint = textColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -126,7 +131,7 @@ fun EditAccountScreen(
                 Text(
                     text = if (uiState.isEditMode) "Edit Account" else "New Account",
                     style = WalletTypography.TitleM,
-                    color = WalletColors.TextPrimary
+                    color = textColor
                 )
 
                 Spacer(modifier = Modifier.width(44.dp))
@@ -145,7 +150,7 @@ fun EditAccountScreen(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(CircleShape)
-                                .background(if (isSelected) WalletColors.Ink else WalletColors.Paper)
+                                .background(if (isSelected) WalletColors.Coral else cardBg)
                                 .clickable { onEvent(EditAccountUiEvent.OnIconSelected(icon)) },
                             contentAlignment = Alignment.Center
                         ) {
@@ -162,14 +167,14 @@ fun EditAccountScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(WalletShapes.CardMedium)
-                        .background(WalletColors.Paper)
-                        .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                        .background(cardBg)
+                        .border(1.dp, borderColor, WalletShapes.CardMedium)
                         .padding(14.dp)
                 ) {
                     BasicTextField(
                         value = uiState.nameText,
                         onValueChange = { onEvent(EditAccountUiEvent.OnNameChanged(it)) },
-                        textStyle = WalletTypography.BodyM.copy(color = WalletColors.TextPrimary),
+                        textStyle = WalletTypography.BodyM.copy(color = textColor),
                         singleLine = true,
                         cursorBrush = SolidColor(WalletColors.Coral),
                         decorationBox = { innerTextField ->
@@ -191,14 +196,14 @@ fun EditAccountScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(WalletShapes.CardMedium)
-                        .background(WalletColors.Paper)
-                        .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                        .background(cardBg)
+                        .border(1.dp, borderColor, WalletShapes.CardMedium)
                         .padding(14.dp)
                 ) {
                     BasicTextField(
                         value = uiState.startingBalanceText,
                         onValueChange = { onEvent(EditAccountUiEvent.OnStartingBalanceChanged(it)) },
-                        textStyle = WalletTypography.BodyM.copy(color = WalletColors.TextPrimary),
+                        textStyle = WalletTypography.BodyM.copy(color = textColor),
                         singleLine = true,
                         cursorBrush = SolidColor(WalletColors.Coral),
                         decorationBox = { innerTextField ->

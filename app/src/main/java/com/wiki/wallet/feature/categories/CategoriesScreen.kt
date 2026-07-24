@@ -35,10 +35,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wiki.wallet.core.database.entity.TransactionType
+import com.wiki.wallet.core.designsystem.theme.ThemeManager
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
@@ -73,10 +75,15 @@ fun CategoriesScreen(
     onEvent: (CategoriesUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val bgColor = ThemeManager.backgroundColor
+    val cardBg = ThemeManager.cardColor
+    val textColor = ThemeManager.textColorPrimary
+    val borderColor = ThemeManager.cardBorderColor
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(WalletColors.PaperPure)
+            .background(bgColor)
     ) {
         Column(
             modifier = Modifier
@@ -95,14 +102,14 @@ fun CategoriesScreen(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(WalletShapes.Pill)
-                        .background(WalletColors.Paper)
+                        .background(cardBg)
                         .clickable { onEvent(CategoriesUiEvent.OnBackClicked) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = WalletColors.Ink,
+                        tint = textColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -110,7 +117,7 @@ fun CategoriesScreen(
                 Text(
                     text = "Category Budgets",
                     style = WalletTypography.TitleM,
-                    color = WalletColors.TextPrimary
+                    color = textColor
                 )
 
                 Spacer(modifier = Modifier.width(44.dp))
@@ -125,7 +132,10 @@ fun CategoriesScreen(
                 items(uiState.categories) { category ->
                     CategoryCardItem(
                         category = category,
-                        onClick = { onEvent(CategoriesUiEvent.OnCategoryClick(category)) }
+                        onClick = { onEvent(CategoriesUiEvent.OnCategoryClick(category)) },
+                        cardBg = cardBg,
+                        textColor = textColor,
+                        borderColor = borderColor
                     )
                 }
             }
@@ -140,7 +150,7 @@ fun CategoriesScreen(
         ModalBottomSheet(
             onDismissRequest = { onEvent(CategoriesUiEvent.OnDismissDetail) },
             sheetState = rememberModalBottomSheetState(),
-            containerColor = WalletColors.PaperPure
+            containerColor = cardBg
         ) {
             Column(
                 modifier = Modifier
@@ -166,7 +176,7 @@ fun CategoriesScreen(
                     }
 
                     Column {
-                        Text(text = category.name, style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                        Text(text = category.name, style = WalletTypography.TitleM, color = textColor)
                         Text(
                             text = if (isIncome) "Income Category" else "Expense Category",
                             style = WalletTypography.BodyM,
@@ -179,7 +189,8 @@ fun CategoriesScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(WalletShapes.CardMedium)
-                        .background(WalletColors.Paper)
+                        .background(bgColor)
+                        .border(1.dp, borderColor, WalletShapes.CardMedium)
                         .padding(16.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -211,13 +222,13 @@ fun CategoriesScreen(
                                         BasicTextField(
                                             value = uiState.editedBudgetText,
                                             onValueChange = { onEvent(CategoriesUiEvent.OnBudgetTextChanged(it)) },
-                                            textStyle = WalletTypography.TitleM.copy(color = WalletColors.TextPrimary),
+                                            textStyle = WalletTypography.TitleM.copy(color = textColor),
                                             singleLine = true,
                                             cursorBrush = SolidColor(WalletColors.Coral),
                                             modifier = Modifier
                                                 .width(100.dp)
                                                 .clip(WalletShapes.CardMedium)
-                                                .background(WalletColors.PaperPure)
+                                                .background(cardBg)
                                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                                         )
                                         Box(
@@ -231,7 +242,7 @@ fun CategoriesScreen(
                                             Icon(
                                                 imageVector = Icons.Default.Check,
                                                 contentDescription = "Save",
-                                                tint = WalletColors.TextOnDark,
+                                                tint = Color.White,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                         }
@@ -244,7 +255,7 @@ fun CategoriesScreen(
                                         Text(
                                             text = if (category.monthlyBudget != null) CurrencyManager.format(category.monthlyBudget) else "Not Set",
                                             style = WalletTypography.TitleM,
-                                            color = WalletColors.TextPrimary
+                                            color = textColor
                                         )
                                         Icon(
                                             imageVector = Icons.Default.Edit,
@@ -267,7 +278,7 @@ fun CategoriesScreen(
                                         .height(8.dp)
                                         .clip(WalletShapes.Pill),
                                     color = if (ratio > 0.9f) WalletColors.Coral else WalletColors.MintChip,
-                                    trackColor = WalletColors.CardBorder
+                                    trackColor = borderColor
                                 )
                             }
                         }
@@ -281,7 +292,10 @@ fun CategoriesScreen(
 @Composable
 private fun CategoryCardItem(
     category: Category,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    cardBg: Color,
+    textColor: Color,
+    borderColor: Color
 ) {
     val isIncome = category.type == TransactionType.INCOME
     val accentColor = if (isIncome) WalletColors.MintChip else WalletColors.Coral
@@ -290,8 +304,8 @@ private fun CategoryCardItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(WalletShapes.CardMedium)
-            .background(WalletColors.Paper)
-            .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+            .background(cardBg)
+            .border(1.dp, borderColor, WalletShapes.CardMedium)
             .clickable { onClick() }
             .padding(14.dp)
     ) {
@@ -328,7 +342,7 @@ private fun CategoryCardItem(
             Text(
                 text = category.name,
                 style = WalletTypography.TitleM,
-                color = WalletColors.TextPrimary,
+                color = textColor,
                 maxLines = 1
             )
 

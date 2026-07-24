@@ -26,8 +26,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wiki.wallet.core.designsystem.theme.ThemeManager
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
@@ -64,10 +66,15 @@ fun HistoryScreen(
     onTransactionClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val bgColor = ThemeManager.backgroundColor
+    val cardBg = ThemeManager.cardColor
+    val textColor = ThemeManager.textColorPrimary
+    val borderColor = ThemeManager.cardBorderColor
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(WalletColors.PaperPure)
+            .background(bgColor)
     ) {
         Column(
             modifier = Modifier
@@ -86,14 +93,14 @@ fun HistoryScreen(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(WalletShapes.Pill)
-                        .background(WalletColors.Paper)
+                        .background(cardBg)
                         .clickable { onEvent(HistoryUiEvent.OnBackClicked) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = WalletColors.Ink,
+                        tint = textColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -101,7 +108,7 @@ fun HistoryScreen(
                 Text(
                     text = "Transaction History",
                     style = WalletTypography.TitleM,
-                    color = WalletColors.TextPrimary
+                    color = textColor
                 )
 
                 Spacer(modifier = Modifier.width(44.dp))
@@ -115,21 +122,27 @@ fun HistoryScreen(
                     FilterChipItem(
                         text = "All",
                         isSelected = uiState.selectedFilter == TransactionFilter.ALL,
-                        onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.ALL)) }
+                        onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.ALL)) },
+                        cardBg = cardBg,
+                        textColor = textColor
                     )
                 }
                 item {
                     FilterChipItem(
                         text = "Income Only",
                         isSelected = uiState.selectedFilter == TransactionFilter.INCOME,
-                        onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.INCOME)) }
+                        onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.INCOME)) },
+                        cardBg = cardBg,
+                        textColor = textColor
                     )
                 }
                 item {
                     FilterChipItem(
                         text = "Expenses Only",
                         isSelected = uiState.selectedFilter == TransactionFilter.EXPENSE,
-                        onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.EXPENSE)) }
+                        onClick = { onEvent(HistoryUiEvent.OnFilterSelected(TransactionFilter.EXPENSE)) },
+                        cardBg = cardBg,
+                        textColor = textColor
                     )
                 }
             }
@@ -177,7 +190,10 @@ fun HistoryScreen(
                         items(group.transactions) { tx ->
                             TransactionRowItem(
                                 transaction = tx,
-                                onClick = { onTransactionClick(tx.id) }
+                                onClick = { onTransactionClick(tx.id) },
+                                cardBg = cardBg,
+                                textColor = textColor,
+                                borderColor = borderColor
                             )
                         }
                     }
@@ -191,19 +207,21 @@ fun HistoryScreen(
 private fun FilterChipItem(
     text: String,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    cardBg: Color,
+    textColor: Color
 ) {
     Box(
         modifier = Modifier
             .clip(WalletShapes.Pill)
-            .background(if (isSelected) WalletColors.Ink else WalletColors.Paper)
+            .background(if (isSelected) WalletColors.Coral else cardBg)
             .clickable { onClick() }
             .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
         Text(
             text = text,
             style = WalletTypography.LabelS,
-            color = if (isSelected) WalletColors.TextOnDark else WalletColors.TextPrimary
+            color = if (isSelected) Color.White else textColor
         )
     }
 }

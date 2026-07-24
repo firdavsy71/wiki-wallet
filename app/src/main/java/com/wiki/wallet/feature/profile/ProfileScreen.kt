@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wiki.wallet.core.designsystem.theme.ThemeManager
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
@@ -68,10 +68,15 @@ fun ProfileScreen(
     onEvent: (ProfileUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val bgColor = ThemeManager.backgroundColor
+    val cardBg = ThemeManager.cardColor
+    val textColor = ThemeManager.textColorPrimary
+    val borderColor = ThemeManager.cardBorderColor
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(WalletColors.PaperPure)
+            .background(bgColor)
     ) {
         Column(
             modifier = Modifier
@@ -91,14 +96,14 @@ fun ProfileScreen(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(WalletShapes.Pill)
-                        .background(WalletColors.Paper)
+                        .background(cardBg)
                         .clickable { onEvent(ProfileUiEvent.OnBackClicked) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = WalletColors.Ink,
+                        tint = textColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -106,7 +111,7 @@ fun ProfileScreen(
                 Text(
                     text = "Profile & Account",
                     style = WalletTypography.TitleM,
-                    color = WalletColors.TextPrimary
+                    color = textColor
                 )
 
                 Spacer(modifier = Modifier.width(44.dp))
@@ -202,7 +207,7 @@ fun ProfileScreen(
             }
 
             // Financial Summary Section
-            Text(text = "Financial Overview", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+            Text(text = "Financial Overview", style = WalletTypography.TitleM, color = textColor)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -211,11 +216,17 @@ fun ProfileScreen(
                 ProfileStatCard(
                     title = "Total Net Worth",
                     value = CurrencyManager.format(uiState.totalNetWorth),
+                    cardBg = cardBg,
+                    textColor = textColor,
+                    borderColor = borderColor,
                     modifier = Modifier.weight(1f)
                 )
                 ProfileStatCard(
                     title = "Accounts",
                     value = "${uiState.totalAccountsCount} Active",
+                    cardBg = cardBg,
+                    textColor = textColor,
+                    borderColor = borderColor,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -227,11 +238,17 @@ fun ProfileScreen(
                 ProfileStatCard(
                     title = "Total Activity",
                     value = "${uiState.totalTransactionsCount} Logs",
+                    cardBg = cardBg,
+                    textColor = textColor,
+                    borderColor = borderColor,
                     modifier = Modifier.weight(1f)
                 )
                 ProfileStatCard(
                     title = "Member Since",
                     value = uiState.memberSinceYear,
+                    cardBg = cardBg,
+                    textColor = textColor,
+                    borderColor = borderColor,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -241,8 +258,8 @@ fun ProfileScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(WalletShapes.CardMedium)
-                    .background(WalletColors.Paper)
-                    .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                    .background(cardBg)
+                    .border(1.dp, borderColor, WalletShapes.CardMedium)
                     .padding(16.dp)
             ) {
                 Row(
@@ -256,7 +273,7 @@ fun ProfileScreen(
                         modifier = Modifier.size(24.dp)
                     )
                     Column {
-                        Text(text = "100% Offline & Private", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                        Text(text = "100% Offline & Private", style = WalletTypography.TitleM, color = textColor)
                         Text(text = "No telemetry or external cloud sync enabled.", style = WalletTypography.BodyM, color = WalletColors.TextMuted)
                     }
                 }
@@ -269,18 +286,21 @@ fun ProfileScreen(
 private fun ProfileStatCard(
     title: String,
     value: String,
+    cardBg: androidx.compose.ui.graphics.Color,
+    textColor: androidx.compose.ui.graphics.Color,
+    borderColor: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .clip(WalletShapes.CardMedium)
-            .background(WalletColors.Paper)
-            .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+            .background(cardBg)
+            .border(1.dp, borderColor, WalletShapes.CardMedium)
             .padding(14.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(text = title, style = WalletTypography.LabelM, color = WalletColors.TextMuted)
-            Text(text = value, style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+            Text(text = value, style = WalletTypography.TitleM, color = textColor)
         }
     }
 }

@@ -49,10 +49,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wiki.wallet.core.designsystem.theme.ThemeManager
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
-import java.util.Locale
 
 @Composable
 fun SettingsRoute(
@@ -83,11 +83,15 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val selectedItem = uiState.currencies.firstOrNull { it.code == uiState.selectedCurrency }
+    val bgColor = ThemeManager.backgroundColor
+    val cardBg = ThemeManager.cardColor
+    val textColor = ThemeManager.textColorPrimary
+    val borderColor = ThemeManager.cardBorderColor
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(WalletColors.PaperPure)
+            .background(bgColor)
     ) {
         Column(
             modifier = Modifier
@@ -107,14 +111,14 @@ fun SettingsScreen(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(WalletShapes.Pill)
-                        .background(WalletColors.Paper)
+                        .background(cardBg)
                         .clickable { onEvent(SettingsUiEvent.OnBackClicked) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = WalletColors.Ink,
+                        tint = textColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -122,7 +126,7 @@ fun SettingsScreen(
                 Text(
                     text = "Settings",
                     style = WalletTypography.TitleM,
-                    color = WalletColors.TextPrimary
+                    color = textColor
                 )
 
                 Spacer(modifier = Modifier.width(44.dp))
@@ -130,14 +134,14 @@ fun SettingsScreen(
 
             // Section 1: Default Currency Selector Card
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = "Default Currency", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                Text(text = "Default Currency", style = WalletTypography.TitleM, color = textColor)
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(WalletShapes.CardMedium)
-                        .background(WalletColors.Paper)
-                        .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                        .background(cardBg)
+                        .border(1.dp, borderColor, WalletShapes.CardMedium)
                         .clickable { onEvent(SettingsUiEvent.OnCurrencyPickerToggle(true)) }
                         .padding(16.dp)
                 ) {
@@ -155,7 +159,7 @@ fun SettingsScreen(
                                 Text(
                                     text = "${selectedItem?.code} - ${selectedItem?.name ?: "Currency"}",
                                     style = WalletTypography.TitleM,
-                                    color = WalletColors.TextPrimary
+                                    color = textColor
                                 )
                                 Text(
                                     text = "Symbol: ${selectedItem?.symbol ?: "$"}",
@@ -168,7 +172,7 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowDropDown,
                             contentDescription = "Select Currency",
-                            tint = WalletColors.Ink,
+                            tint = textColor,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -177,14 +181,14 @@ fun SettingsScreen(
 
             // Section 2: Appearance & Theme Card
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = "Appearance & Theme", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                Text(text = "Appearance & Theme", style = WalletTypography.TitleM, color = textColor)
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(WalletShapes.CardMedium)
-                        .background(WalletColors.Paper)
-                        .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                        .background(cardBg)
+                        .border(1.dp, borderColor, WalletShapes.CardMedium)
                         .padding(16.dp)
                 ) {
                     Row(
@@ -196,15 +200,15 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.Palette, contentDescription = "Theme", tint = WalletColors.Ink, modifier = Modifier.size(20.dp))
-                            Text(text = "Color Palette", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                            Icon(imageVector = Icons.Default.Palette, contentDescription = "Theme", tint = textColor, modifier = Modifier.size(20.dp))
+                            Text(text = "Color Palette", style = WalletTypography.TitleM, color = textColor)
                         }
 
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            ThemeChip("Dark Ink", uiState.selectedTheme == "Dark Ink") {
+                            ThemeChip("Dark Ink", uiState.selectedTheme == "Dark Ink", cardBg, textColor) {
                                 onEvent(SettingsUiEvent.OnThemeSelected("Dark Ink"))
                             }
-                            ThemeChip("Light Paper", uiState.selectedTheme == "Light Paper") {
+                            ThemeChip("Light Paper", uiState.selectedTheme == "Light Paper", cardBg, textColor) {
                                 onEvent(SettingsUiEvent.OnThemeSelected("Light Paper"))
                             }
                         }
@@ -214,14 +218,14 @@ fun SettingsScreen(
 
             // Section 3: Security & Notifications Toggles
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = "Security & Notifications", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                Text(text = "Security & Notifications", style = WalletTypography.TitleM, color = textColor)
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(WalletShapes.CardMedium)
-                        .background(WalletColors.Paper)
-                        .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                        .background(cardBg)
+                        .border(1.dp, borderColor, WalletShapes.CardMedium)
                         .padding(14.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -234,8 +238,8 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Icon(imageVector = Icons.Default.Lock, contentDescription = "Lock", tint = WalletColors.Ink, modifier = Modifier.size(20.dp))
-                                Text(text = "App Lock / Biometric", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                                Icon(imageVector = Icons.Default.Lock, contentDescription = "Lock", tint = textColor, modifier = Modifier.size(20.dp))
+                                Text(text = "App Lock / Biometric", style = WalletTypography.TitleM, color = textColor)
                             }
                             Switch(
                                 checked = uiState.isSecurityLockEnabled,
@@ -253,8 +257,8 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Icon(imageVector = Icons.Default.Notifications, contentDescription = "Reminder", tint = WalletColors.Ink, modifier = Modifier.size(20.dp))
-                                Text(text = "Daily Logging Reminder", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                                Icon(imageVector = Icons.Default.Notifications, contentDescription = "Reminder", tint = textColor, modifier = Modifier.size(20.dp))
+                                Text(text = "Daily Logging Reminder", style = WalletTypography.TitleM, color = textColor)
                             }
                             Switch(
                                 checked = uiState.isDailyReminderEnabled,
@@ -268,7 +272,7 @@ fun SettingsScreen(
 
             // Section 4: Data Management & Reset Card
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = "Data Management", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                Text(text = "Data Management", style = WalletTypography.TitleM, color = textColor)
 
                 Box(
                     modifier = Modifier
@@ -303,8 +307,8 @@ fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(WalletShapes.CardMedium)
-                    .background(WalletColors.Paper)
-                    .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                    .background(cardBg)
+                    .border(1.dp, borderColor, WalletShapes.CardMedium)
                     .padding(16.dp)
             ) {
                 Row(
@@ -317,7 +321,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(imageVector = Icons.Default.Info, contentDescription = "Info", tint = WalletColors.TextMuted, modifier = Modifier.size(20.dp))
-                        Text(text = "App Version", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                        Text(text = "App Version", style = WalletTypography.TitleM, color = textColor)
                     }
                     Text(text = "ApexBudget v${uiState.appVersion}", style = WalletTypography.LabelM, color = WalletColors.Coral)
                 }
@@ -330,7 +334,7 @@ fun SettingsScreen(
         ModalBottomSheet(
             onDismissRequest = { onEvent(SettingsUiEvent.OnCurrencyPickerToggle(false)) },
             sheetState = rememberModalBottomSheetState(),
-            containerColor = WalletColors.PaperPure
+            containerColor = cardBg
         ) {
             Column(
                 modifier = Modifier
@@ -338,13 +342,14 @@ fun SettingsScreen(
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(text = "Select Country Currency", style = WalletTypography.TitleM, color = WalletColors.TextPrimary)
+                Text(text = "Select Country Currency", style = WalletTypography.TitleM, color = textColor)
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(WalletShapes.CardMedium)
-                        .background(WalletColors.Paper)
+                        .background(bgColor)
+                        .border(1.dp, borderColor, WalletShapes.CardMedium)
                         .padding(12.dp)
                 ) {
                     Row(
@@ -355,7 +360,7 @@ fun SettingsScreen(
                         BasicTextField(
                             value = uiState.searchQuery,
                             onValueChange = { onEvent(SettingsUiEvent.OnSearchQueryChanged(it)) },
-                            textStyle = WalletTypography.BodyM.copy(color = WalletColors.TextPrimary),
+                            textStyle = WalletTypography.BodyM.copy(color = textColor),
                             singleLine = true,
                             cursorBrush = SolidColor(WalletColors.Coral),
                             decorationBox = { innerTextField ->
@@ -386,7 +391,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(WalletShapes.CardMedium)
-                                .background(if (isSelected) WalletColors.Ink else WalletColors.Paper)
+                                .background(if (isSelected) WalletColors.InkElevated else bgColor)
                                 .clickable { onEvent(SettingsUiEvent.OnCurrencySelected(item.code)) }
                                 .padding(14.dp)
                         ) {
@@ -404,7 +409,7 @@ fun SettingsScreen(
                                         Text(
                                             text = "${item.code} - ${item.name}",
                                             style = WalletTypography.TitleM,
-                                            color = if (isSelected) WalletColors.TextOnDark else WalletColors.TextPrimary
+                                            color = if (isSelected) WalletColors.TextOnDark else textColor
                                         )
                                         Text(
                                             text = "Symbol: ${item.symbol}",
@@ -449,19 +454,21 @@ fun SettingsScreen(
 private fun ThemeChip(
     label: String,
     isSelected: Boolean,
+    cardBg: Color,
+    textColor: Color,
     onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .clip(WalletShapes.Pill)
-            .background(if (isSelected) WalletColors.Ink else WalletColors.Paper)
+            .background(if (isSelected) WalletColors.Coral else cardBg)
             .clickable { onClick() }
             .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Text(
             text = label,
             style = WalletTypography.LabelS,
-            color = if (isSelected) WalletColors.TextOnDark else WalletColors.TextPrimary
+            color = if (isSelected) Color.White else textColor
         )
     }
 }

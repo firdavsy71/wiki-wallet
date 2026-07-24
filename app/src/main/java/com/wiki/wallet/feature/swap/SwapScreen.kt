@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wiki.wallet.core.database.entity.TransactionType
 import com.wiki.wallet.core.designsystem.components.PillButton
 import com.wiki.wallet.core.designsystem.components.PillButtonVariant
+import com.wiki.wallet.core.designsystem.theme.ThemeManager
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
@@ -101,10 +102,15 @@ fun SwapScreen(
     onEvent: (SwapUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val bgColor = ThemeManager.backgroundColor
+    val cardBg = ThemeManager.cardColor
+    val textColor = ThemeManager.textColorPrimary
+    val borderColor = ThemeManager.cardBorderColor
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(WalletColors.PaperPure)
+            .background(bgColor)
     ) {
         Column(
             modifier = Modifier
@@ -124,14 +130,14 @@ fun SwapScreen(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(WalletShapes.Pill)
-                        .background(WalletColors.Paper)
+                        .background(cardBg)
                         .clickable { onEvent(SwapUiEvent.OnBackClicked) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = WalletColors.Ink,
+                        tint = textColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -139,7 +145,7 @@ fun SwapScreen(
                 Text(
                     text = if (uiState.isEditMode) "Edit Transaction" else "Add Transaction",
                     style = WalletTypography.TitleM,
-                    color = WalletColors.TextPrimary
+                    color = textColor
                 )
 
                 Spacer(modifier = Modifier.width(44.dp))
@@ -150,13 +156,14 @@ fun SwapScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(WalletShapes.Pill)
-                    .background(WalletColors.Paper)
+                    .background(cardBg)
                     .padding(4.dp)
             ) {
                 TypeSegmentButton(
                     text = "Expense (−)",
                     isSelected = uiState.type == TransactionType.EXPENSE,
                     selectedColor = WalletColors.Coral,
+                    unselectedTextColor = textColor,
                     onClick = { onEvent(SwapUiEvent.OnTypeChanged(TransactionType.EXPENSE)) },
                     modifier = Modifier.weight(1f)
                 )
@@ -165,6 +172,7 @@ fun SwapScreen(
                     text = "Income (+)",
                     isSelected = uiState.type == TransactionType.INCOME,
                     selectedColor = WalletColors.MintChip,
+                    unselectedTextColor = textColor,
                     onClick = { onEvent(SwapUiEvent.OnTypeChanged(TransactionType.INCOME)) },
                     modifier = Modifier.weight(1f)
                 )
@@ -231,8 +239,8 @@ fun SwapScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(WalletShapes.CardMedium)
-                        .background(WalletColors.Paper)
-                        .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                        .background(cardBg)
+                        .border(1.dp, borderColor, WalletShapes.CardMedium)
                         .clickable { onEvent(SwapUiEvent.OnCategoryPickerToggle(true)) }
                         .padding(16.dp)
                 ) {
@@ -252,14 +260,14 @@ fun SwapScreen(
                             Text(
                                 text = uiState.selectedCategory?.name ?: "Select Category",
                                 style = WalletTypography.TitleM,
-                                color = WalletColors.TextPrimary
+                                color = textColor
                             )
                         }
 
                         Icon(
                             imageVector = Icons.Default.ArrowDropDown,
                             contentDescription = "Select Category",
-                            tint = WalletColors.Ink,
+                            tint = textColor,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -283,6 +291,9 @@ fun SwapScreen(
                         AccountChip(
                             account = account,
                             isSelected = isSelected,
+                            cardBg = cardBg,
+                            textColor = textColor,
+                            borderColor = borderColor,
                             onClick = { onEvent(SwapUiEvent.OnAccountSelected(account)) },
                             modifier = Modifier.weight(1f)
                         )
@@ -302,14 +313,14 @@ fun SwapScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(WalletShapes.CardMedium)
-                        .background(WalletColors.Paper)
-                        .border(1.dp, WalletColors.CardBorder, WalletShapes.CardMedium)
+                        .background(cardBg)
+                        .border(1.dp, borderColor, WalletShapes.CardMedium)
                         .padding(14.dp)
                 ) {
                     BasicTextField(
                         value = uiState.noteText,
                         onValueChange = { onEvent(SwapUiEvent.OnNoteChanged(it)) },
-                        textStyle = WalletTypography.BodyM.copy(color = WalletColors.TextPrimary),
+                        textStyle = WalletTypography.BodyM.copy(color = textColor),
                         singleLine = true,
                         cursorBrush = SolidColor(WalletColors.Coral),
                         decorationBox = { innerTextField ->
@@ -379,7 +390,7 @@ fun SwapScreen(
         ModalBottomSheet(
             onDismissRequest = { onEvent(SwapUiEvent.OnCategoryPickerToggle(false)) },
             sheetState = rememberModalBottomSheetState(),
-            containerColor = WalletColors.PaperPure
+            containerColor = cardBg
         ) {
             Column(
                 modifier = Modifier
@@ -390,7 +401,7 @@ fun SwapScreen(
                 Text(
                     text = "Select Category",
                     style = WalletTypography.TitleM,
-                    color = WalletColors.TextPrimary
+                    color = textColor
                 )
 
                 val availableCats = uiState.categories.filter { it.type == uiState.type }
@@ -406,7 +417,7 @@ fun SwapScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(WalletShapes.CardMedium)
-                                .background(if (isSelected) WalletColors.Ink else WalletColors.Paper)
+                                .background(if (isSelected) WalletColors.InkElevated else bgColor)
                                 .clickable { onEvent(SwapUiEvent.OnCategorySelected(category)) }
                                 .padding(14.dp)
                         ) {
@@ -421,7 +432,7 @@ fun SwapScreen(
                                 Text(
                                     text = category.name,
                                     style = WalletTypography.TitleM,
-                                    color = if (isSelected) WalletColors.TextOnDark else WalletColors.TextPrimary
+                                    color = if (isSelected) WalletColors.TextOnDark else textColor
                                 )
                             }
                         }
@@ -437,6 +448,7 @@ private fun TypeSegmentButton(
     text: String,
     isSelected: Boolean,
     selectedColor: Color,
+    unselectedTextColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -451,7 +463,7 @@ private fun TypeSegmentButton(
         Text(
             text = text,
             style = WalletTypography.TitleM,
-            color = if (isSelected) Color.White else WalletColors.TextMuted
+            color = if (isSelected) Color.White else unselectedTextColor
         )
     }
 }
@@ -460,16 +472,19 @@ private fun TypeSegmentButton(
 private fun AccountChip(
     account: Account,
     isSelected: Boolean,
+    cardBg: Color,
+    textColor: Color,
+    borderColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .clip(WalletShapes.CardMedium)
-            .background(if (isSelected) WalletColors.Ink else WalletColors.Paper)
+            .background(if (isSelected) WalletColors.Ink else cardBg)
             .border(
                 width = 1.dp,
-                color = if (isSelected) WalletColors.Ink else WalletColors.CardBorder,
+                color = if (isSelected) WalletColors.Ink else borderColor,
                 shape = WalletShapes.CardMedium
             )
             .clickable { onClick() }
@@ -484,7 +499,7 @@ private fun AccountChip(
             Text(
                 text = account.name,
                 style = WalletTypography.LabelM,
-                color = if (isSelected) WalletColors.TextOnDark else WalletColors.TextPrimary,
+                color = if (isSelected) WalletColors.TextOnDark else textColor,
                 maxLines = 1
             )
         }

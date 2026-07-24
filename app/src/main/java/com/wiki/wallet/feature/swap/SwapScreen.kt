@@ -25,10 +25,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -274,10 +278,10 @@ fun SwapScreen(
                 }
             }
 
-            // Account Selection Chips
+            // Account Selection Chips (with High-Contrast Dark Mode Highlight)
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "Account",
+                    text = "Source Account",
                     style = WalletTypography.LabelM,
                     color = WalletColors.TextMuted
                 )
@@ -298,6 +302,55 @@ fun SwapScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
+                }
+            }
+
+            // Recurring Bill / Subscription Toggle Section
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(WalletShapes.CardMedium)
+                    .background(cardBg)
+                    .border(1.dp, borderColor, WalletShapes.CardMedium)
+                    .padding(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = "Bill",
+                            tint = WalletColors.Coral,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Column {
+                            Text(
+                                text = "Set as Scheduled Bill / Subscription",
+                                style = WalletTypography.TitleM,
+                                color = textColor
+                            )
+                            Text(
+                                text = "Will appear on the Bill Calendar for due tracking",
+                                style = WalletTypography.LabelS,
+                                color = WalletColors.TextMuted
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = uiState.isBill,
+                        onCheckedChange = { onEvent(SwapUiEvent.OnIsBillToggled(it)) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = WalletColors.Coral
+                        )
+                    )
                 }
             }
 
@@ -327,7 +380,7 @@ fun SwapScreen(
                             Box {
                                 if (uiState.noteText.isEmpty()) {
                                     Text(
-                                        text = "Add note or description...",
+                                        text = "Add note or subscription name...",
                                         style = WalletTypography.BodyM,
                                         color = WalletColors.TextMuted
                                     )
@@ -478,13 +531,18 @@ private fun AccountChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // High-contrast contrast highlight in dark mode: selected chip uses vibrant Coral container
+    val containerBg = if (isSelected) WalletColors.Coral else cardBg
+    val contentColor = if (isSelected) Color.White else textColor
+    val borderCol = if (isSelected) WalletColors.Coral else borderColor
+
     Box(
         modifier = modifier
             .clip(WalletShapes.CardMedium)
-            .background(if (isSelected) WalletColors.Ink else cardBg)
+            .background(containerBg)
             .border(
-                width = 1.dp,
-                color = if (isSelected) WalletColors.Ink else borderColor,
+                width = if (isSelected) 2.dp else 1.dp,
+                color = borderCol,
                 shape = WalletShapes.CardMedium
             )
             .clickable { onClick() }
@@ -499,9 +557,17 @@ private fun AccountChip(
             Text(
                 text = account.name,
                 style = WalletTypography.LabelM,
-                color = if (isSelected) WalletColors.TextOnDark else textColor,
+                color = contentColor,
                 maxLines = 1
             )
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
     }
 }

@@ -10,40 +10,49 @@ import com.wiki.wallet.domain.repository.AccountRepository
 import com.wiki.wallet.domain.repository.TransactionRepository
 import com.wiki.wallet.domain.usecase.AddTransactionUseCase
 import com.wiki.wallet.domain.usecase.GetCategoriesUseCase
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class SwapUiState(
-    val transactionId: String? = null,
     val isEditMode: Boolean = false,
-    val type: TransactionType = TransactionType.EXPENSE,
+    val transactionId: String? = null,
     val amountText: String = "",
-    val noteText: String = "",
+    val type: TransactionType = TransactionType.EXPENSE,
     val selectedCategory: Category? = null,
     val selectedAccount: Account? = null,
+    val noteText: String = "",
     val categories: List<Category> = emptyList(),
     val accounts: List<Account> = emptyList(),
     val isCategoryPickerOpen: Boolean = false,
+    val isBill: Boolean = false,
+    val dueDateMillis: Long? = null,
     val isExecuting: Boolean = false,
-    val isCtaEnabled: Boolean = false,
-    val budgetProgressRatio: Float = 0.0f,
-    val existingTransaction: Transaction? = null
-)
+    val originalCreatedAt: Long = System.currentTimeMillis()
+) {
+    val isCtaEnabled: Boolean
+        get() = amountText.toDoubleOrNull() != null &&
+                (amountText.toDoubleOrNull() ?: 0.0) > 0.0 &&
+                selectedCategory != null &&
+                selectedAccount != null
+}
 
 sealed interface SwapUiEvent {
+    data class OnAmountChanged(val amount: String) : SwapUiEvent
     data class OnTypeChanged(val type: TransactionType) : SwapUiEvent
-    data class OnAmountChanged(val text: String) : SwapUiEvent
-    data class OnNoteChanged(val text: String) : SwapUiEvent
     data class OnCategorySelected(val category: Category) : SwapUiEvent
     data class OnAccountSelected(val account: Account) : SwapUiEvent
+    data class OnNoteChanged(val note: String) : SwapUiEvent
+    data class OnIsBillToggled(val isBill: Boolean) : SwapUiEvent
+    data class OnDueDateChanged(val millis: Long) : SwapUiEvent
     data class OnCategoryPickerToggle(val isOpen: Boolean) : SwapUiEvent
     data object OnSaveClicked : SwapUiEvent
     data object OnDeleteClicked : SwapUiEvent
@@ -65,95 +74,99 @@ class SwapViewModel(
     private val transactionRepository: TransactionRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SwapUiState(transactionId = transactionId, isEditMode = transactionId != null))
+    private val _uiState = MutableStateFlow(SwapUiState(isEditMode = transactionId != null, transactionId = transactionId))
     val uiState: StateFlow<SwapUiState> = _uiState.asStateFlow()
 
-    private val _effectChannel = Channel<SwapUiEffect>()
-    val effect = _effectChannel.receiveAsFlow()
+    private val _effect = MutableSharedFlow<SwapUiEffect>()
+    val effect: SharedFlow<SwapUiEffect> = _effect.asSharedFlow()
 
     init {
-        combine(
-            getCategoriesUseCase(),
-            accountRepository.observeAllAccounts(),
-            transactionRepository.observeAllTransactions()
-        ) { categories, accounts, allTransactions ->
-            val existingTx = if (transactionId != null) allTransactions.firstOrNull { it.id == transactionId } else null
-            
-            val activeType = existingTx?.type ?: _uiState.value.type
-            val matchingCat = existingTx?.let { tx -> categories.firstOrNull { it.id == tx.categoryId } }
-                ?: categories.firstOrNull { it.type == activeType }
-            val matchingAcc = existingTx?.let { tx -> accounts.firstOrNull { it.id == tx.accountId } }
-                ?: accounts.firstOrNull()
-
-            _uiState.update { state ->
-                state.copy(
-                    type = activeType,
-                    amountText = if (state.amountText.isEmpty() && existingTx != null) String.format(java.util.Locale.US, "%.2f", existingTx.amount) else state.amountText,
-                    noteText = if (state.noteText.isEmpty() && existingTx != null) (existingTx.note ?: "") else state.noteText,
-                    categories = categories,
-                    accounts = accounts,
-                    selectedCategory = state.selectedCategory ?: matchingCat,
-                    selectedAccount = state.selectedAccount ?: matchingAcc,
-                    budgetProgressRatio = matchingCat?.budgetProgressRatio ?: 0f,
-                    existingTransaction = existingTx
-                )
+        accountRepository.observeAllAccounts()
+            .onEach { accountsList ->
+                _uiState.update { state ->
+                    val defaultAccount = state.selectedAccount ?: accountsList.firstOrNull()
+                    state.copy(
+                        accounts = accountsList,
+                        selectedAccount = defaultAccount
+                    )
+                }
             }
-            validateForm()
-        }.launchIn(viewModelScope)
+            .launchIn(viewModelScope)
+
+        getCategoriesUseCase()
+            .onEach { categoriesList ->
+                _uiState.update { state ->
+                    val filtered = categoriesList.filter { it.type == state.type }
+                    val defaultCategory = state.selectedCategory ?: filtered.firstOrNull()
+                    state.copy(
+                        categories = categoriesList,
+                        selectedCategory = defaultCategory
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+
+        if (transactionId != null) {
+            viewModelScope.launch {
+                val allTxs = transactionRepository.observeAllTransactions().firstOrNull() ?: emptyList()
+                val target = allTxs.firstOrNull { it.id == transactionId }
+                if (target != null) {
+                    val allAccounts = accountRepository.observeAllAccounts().firstOrNull() ?: emptyList()
+                    val allCategories = getCategoriesUseCase().firstOrNull() ?: emptyList()
+
+                    _uiState.update {
+                        it.copy(
+                            amountText = target.amount.toString(),
+                            type = target.type,
+                            selectedCategory = allCategories.firstOrNull { cat -> cat.id == target.categoryId },
+                            selectedAccount = allAccounts.firstOrNull { acc -> acc.id == target.accountId },
+                            noteText = target.note ?: "",
+                            isBill = target.isBill,
+                            dueDateMillis = target.dueDate,
+                            originalCreatedAt = target.createdAt
+                        )
+                    }
+                }
+            }
+        }
     }
 
     fun onEvent(event: SwapUiEvent) {
         when (event) {
+            is SwapUiEvent.OnAmountChanged -> {
+                _uiState.update { it.copy(amountText = event.amount) }
+            }
             is SwapUiEvent.OnTypeChanged -> {
-                val matchingCat = _uiState.value.categories.firstOrNull { it.type == event.type }
-                _uiState.update {
-                    it.copy(
+                _uiState.update { state ->
+                    val filtered = state.categories.filter { it.type == event.type }
+                    state.copy(
                         type = event.type,
-                        selectedCategory = matchingCat,
-                        budgetProgressRatio = matchingCat?.budgetProgressRatio ?: 0f
+                        selectedCategory = filtered.firstOrNull()
                     )
                 }
-                validateForm()
-            }
-            is SwapUiEvent.OnAmountChanged -> {
-                _uiState.update { it.copy(amountText = event.text) }
-                validateForm()
-            }
-            is SwapUiEvent.OnNoteChanged -> {
-                _uiState.update { it.copy(noteText = event.text) }
             }
             is SwapUiEvent.OnCategorySelected -> {
-                _uiState.update {
-                    it.copy(
-                        selectedCategory = event.category,
-                        isCategoryPickerOpen = false,
-                        budgetProgressRatio = event.category.budgetProgressRatio
-                    )
-                }
-                validateForm()
+                _uiState.update { it.copy(selectedCategory = event.category, isCategoryPickerOpen = false) }
             }
             is SwapUiEvent.OnAccountSelected -> {
                 _uiState.update { it.copy(selectedAccount = event.account) }
-                validateForm()
+            }
+            is SwapUiEvent.OnNoteChanged -> {
+                _uiState.update { it.copy(noteText = event.note) }
+            }
+            is SwapUiEvent.OnIsBillToggled -> {
+                _uiState.update { it.copy(isBill = event.isBill) }
+            }
+            is SwapUiEvent.OnDueDateChanged -> {
+                _uiState.update { it.copy(dueDateMillis = event.millis) }
             }
             is SwapUiEvent.OnCategoryPickerToggle -> {
                 _uiState.update { it.copy(isCategoryPickerOpen = event.isOpen) }
             }
-            SwapUiEvent.OnSaveClicked -> {
-                saveTransaction()
-            }
-            SwapUiEvent.OnDeleteClicked -> {
-                deleteTransaction()
-            }
+            SwapUiEvent.OnSaveClicked -> saveTransaction()
+            SwapUiEvent.OnDeleteClicked -> deleteTransaction()
             SwapUiEvent.OnBackClicked -> {}
         }
-    }
-
-    private fun validateForm() {
-        val state = _uiState.value
-        val amount = state.amountText.toDoubleOrNull()
-        val isValid = amount != null && amount > 0.0 && state.selectedCategory != null && state.selectedAccount != null
-        _uiState.update { it.copy(isCtaEnabled = isValid) }
     }
 
     private fun saveTransaction() {
@@ -162,21 +175,22 @@ class SwapViewModel(
         val category = state.selectedCategory ?: return
         val account = state.selectedAccount ?: return
 
-        _uiState.update { it.copy(isExecuting = true, isCtaEnabled = false) }
-
         viewModelScope.launch {
-            runCatching {
-                if (state.isEditMode && state.existingTransaction != null) {
-                    val existing = state.existingTransaction
+            _uiState.update { it.copy(isExecuting = true) }
+            try {
+                if (state.isEditMode && state.transactionId != null) {
                     transactionRepository.updateTransaction(
-                        id = existing.id,
+                        id = state.transactionId,
                         amount = amount,
                         type = state.type,
                         categoryId = category.id,
                         accountId = account.id,
                         note = state.noteText.ifBlank { null },
-                        dateMillis = existing.date,
-                        createdAt = existing.createdAt
+                        dateMillis = System.currentTimeMillis(),
+                        createdAt = state.originalCreatedAt,
+                        isBill = state.isBill,
+                        dueDate = state.dueDateMillis ?: System.currentTimeMillis(),
+                        isPaid = !state.isBill
                     )
                 } else {
                     addTransactionUseCase(
@@ -184,32 +198,36 @@ class SwapViewModel(
                         type = state.type,
                         categoryId = category.id,
                         accountId = account.id,
-                        note = state.noteText.ifBlank { null }
+                        note = state.noteText.ifBlank { null },
+                        dateMillis = System.currentTimeMillis()
                     )
                 }
-            }.onSuccess {
-                _uiState.update { it.copy(isExecuting = false, isCtaEnabled = true) }
-                _effectChannel.send(SwapUiEffect.SaveSuccess)
-            }.onFailure { err ->
-                _uiState.update { it.copy(isExecuting = false, isCtaEnabled = true) }
-                _effectChannel.send(SwapUiEffect.Error(err.message ?: "Failed to save transaction"))
+                _effect.emit(SwapUiEffect.SaveSuccess)
+            } catch (e: Exception) {
+                _effect.emit(SwapUiEffect.Error(e.message ?: "Failed to save transaction."))
+            } finally {
+                _uiState.update { it.copy(isExecuting = false) }
             }
         }
     }
 
     private fun deleteTransaction() {
-        val existing = _uiState.value.existingTransaction ?: return
-        _uiState.update { it.copy(isExecuting = true, isCtaEnabled = false) }
+        val state = _uiState.value
+        if (!state.isEditMode || state.transactionId == null) return
 
         viewModelScope.launch {
-            runCatching {
-                transactionRepository.deleteTransaction(existing)
-            }.onSuccess {
-                _uiState.update { it.copy(isExecuting = false, isCtaEnabled = true) }
-                _effectChannel.send(SwapUiEffect.DeleteSuccess)
-            }.onFailure { err ->
-                _uiState.update { it.copy(isExecuting = false, isCtaEnabled = true) }
-                _effectChannel.send(SwapUiEffect.Error(err.message ?: "Failed to delete transaction"))
+            _uiState.update { it.copy(isExecuting = true) }
+            try {
+                val allTxs = transactionRepository.observeAllTransactions().firstOrNull() ?: emptyList()
+                val target = allTxs.firstOrNull { it.id == state.transactionId }
+                if (target != null) {
+                    transactionRepository.deleteTransaction(target)
+                    _effect.emit(SwapUiEffect.DeleteSuccess)
+                }
+            } catch (e: Exception) {
+                _effect.emit(SwapUiEffect.Error(e.message ?: "Failed to delete transaction."))
+            } finally {
+                _uiState.update { it.copy(isExecuting = false) }
             }
         }
     }

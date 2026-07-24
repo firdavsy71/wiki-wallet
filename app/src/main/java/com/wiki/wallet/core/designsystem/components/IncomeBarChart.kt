@@ -1,9 +1,5 @@
 package com.wiki.wallet.core.designsystem.components
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,17 +9,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,24 +24,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.wiki.wallet.core.designsystem.theme.ThemeManager
 import com.wiki.wallet.core.designsystem.theme.WalletColors
 import com.wiki.wallet.core.designsystem.theme.WalletShapes
 import com.wiki.wallet.core.designsystem.theme.WalletTypography
 import com.wiki.wallet.core.util.CurrencyManager
-import kotlinx.coroutines.delay
 
 data class BarChartItem(
     val dayLabel: String,
-    val valueRatio: Float,
+    val valueRatio: Float,         // 0f..1f
     val incomeAmount: Double = 0.0,
     val expenseAmount: Double = 0.0,
     val isActive: Boolean = false,
@@ -58,216 +45,178 @@ data class BarChartItem(
 )
 
 @Composable
-fun HatchedBar(
-    heightRatio: Float,
-    isActive: Boolean,
-    isPositive: Boolean = true,
-    modifier: Modifier = Modifier,
-    animationDelayMs: Long = 0
-) {
-    val animatedRatio = remember { Animatable(0f) }
-
-    LaunchedEffect(heightRatio) {
-        delay(animationDelayMs)
-        animatedRatio.animateTo(
-            targetValue = heightRatio.coerceIn(0.1f, 1f),
-            animationSpec = spring(
-                dampingRatio = 0.75f,
-                stiffness = Spring.StiffnessLow
-            )
-        )
-    }
-
-    val currentRatio = animatedRatio.value
-    val barColor = if (isPositive) WalletColors.MintChip else WalletColors.Coral
-
-    Box(
-        modifier = modifier
-            .fillMaxHeight(currentRatio)
-            .clip(WalletShapes.BarRounded)
-            .then(
-                if (isActive) {
-                    Modifier.background(barColor)
-                } else {
-                    Modifier
-                        .background(barColor.copy(alpha = 0.25f))
-                        .border(1.dp, barColor.copy(alpha = 0.5f), WalletShapes.BarRounded)
-                }
-            )
-    ) {
-        if (!isActive) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val width = size.width
-                val height = size.height
-                val strokeWidth = 1.dp.toPx()
-                val step = 8.dp.toPx()
-                val strokeColor = barColor.copy(alpha = 0.4f)
-
-                val cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx())
-                val path = Path().apply {
-                    addRoundRect(
-                        RoundRect(
-                            rect = Rect(0f, 0f, width, height),
-                            topLeft = cornerRadius,
-                            topRight = cornerRadius,
-                            bottomRight = CornerRadius.Zero,
-                            bottomLeft = CornerRadius.Zero
-                        )
-                    )
-                }
-
-                clipPath(path) {
-                    var x = -height
-                    while (x < width + height) {
-                        drawLine(
-                            color = strokeColor,
-                            start = Offset(x, height),
-                            end = Offset(x + height, 0f),
-                            strokeWidth = strokeWidth
-                        )
-                        x += step
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun IncomeBarChart(
     items: List<BarChartItem>,
     modifier: Modifier = Modifier,
     cardHeight: Dp = 230.dp
 ) {
-    var selectedIndex by remember { mutableStateOf<Int?>(null) }
+    var selectedIndex by remember { mutableStateOf(items.lastIndex.coerceAtLeast(0)) }
+    val activeItem = items.getOrNull(selectedIndex) ?: items.lastOrNull()
+
+    val cardBg = ThemeManager.cardColor
+    val textColor = ThemeManager.textColorPrimary
+    val borderColor = ThemeManager.cardBorderColor
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(cardHeight)
             .clip(WalletShapes.CardLarge)
-            .background(WalletColors.Paper)
-            .border(1.dp, WalletColors.CardBorder, WalletShapes.CardLarge)
-            .padding(14.dp)
+            .background(cardBg)
+            .border(1.dp, borderColor, WalletShapes.CardLarge)
+            .padding(18.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Header Legend & Selected Day Detail
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Header Row: Title & Active Day Cash Flow Breakdown Tooltip
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                val selectedItem = selectedIndex?.let { items.getOrNull(it) }
-                if (selectedItem != null) {
+                Column {
                     Text(
-                        text = "${selectedItem.dayLabel}: +${CurrencyManager.format(selectedItem.incomeAmount)} / -${CurrencyManager.format(selectedItem.expenseAmount)}",
-                        style = WalletTypography.LabelM,
-                        color = WalletColors.TextPrimary,
-                        maxLines = 1
+                        text = "Daily Cash Flow Graph",
+                        style = WalletTypography.TitleM,
+                        color = textColor
                     )
-                } else {
                     Text(
-                        text = "Daily Net Flow",
-                        style = WalletTypography.LabelM,
+                        text = activeItem?.dayLabel?.let { "Selected: $it" } ?: "Tap bar to inspect day details",
+                        style = WalletTypography.LabelS,
                         color = WalletColors.TextMuted
                     )
                 }
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    LegendItem(label = "In", color = WalletColors.MintChip)
-                    LegendItem(label = "Out", color = WalletColors.Coral)
+                if (activeItem != null) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "+${CurrencyManager.format(activeItem.incomeAmount)}",
+                            style = WalletTypography.LabelS,
+                            color = WalletColors.MintChip
+                        )
+                        Text(
+                            text = " / ",
+                            style = WalletTypography.LabelS,
+                            color = WalletColors.TextMuted
+                        )
+                        Text(
+                            text = "-${CurrencyManager.format(activeItem.expenseAmount)}",
+                            style = WalletTypography.LabelS,
+                            color = WalletColors.Coral
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Bars Area
-            Row(
+            // Dual Bar Chart Area
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-                verticalAlignment = Alignment.Bottom
+                    .height(cardHeight - 80.dp),
+                contentAlignment = Alignment.BottomCenter
             ) {
-                items.forEachIndexed { index, item ->
-                    val isSelected = selectedIndex == index
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    items.forEachIndexed { index, item ->
+                        val isSelected = index == selectedIndex
+                        val barHeightRatio = item.valueRatio.coerceIn(0.12f, 1f)
 
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable {
-                                selectedIndex = if (selectedIndex == index) null else index
-                            },
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Box(
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Bottom,
                             modifier = Modifier
                                 .weight(1f)
-                                .fillMaxWidth(),
-                            contentAlignment = Alignment.BottomCenter
+                                .clickable { selectedIndex = index }
+                                .padding(horizontal = 2.dp)
                         ) {
-                            if (item.deltaChipText != null && !isSelected) {
-                                DeltaChip(
-                                    text = item.deltaChipText,
-                                    isPositive = item.isDeltaPositive,
-                                    modifier = Modifier.offset(y = (-2).dp)
+                            // Active Tooltip Chip above selected bar
+                            if (isSelected && item.deltaChipText != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(WalletShapes.Pill)
+                                        .background(if (item.isDeltaPositive) WalletColors.MintChip else WalletColors.Coral)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = item.deltaChipText,
+                                        style = WalletTypography.LabelS,
+                                        color = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+
+                            // Dual Pillar Bars (Income vs Expense)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.85f)
+                                    .fillMaxHeight(barHeightRatio)
+                                    .clip(WalletShapes.CardMedium)
+                                    .background(if (isSelected) WalletColors.InkElevated else cardBg)
+                                    .padding(2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                // Income Bar (MintChip)
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight(if (item.incomeAmount > 0) 1f else 0.1f)
+                                        .clip(WalletShapes.Pill)
+                                        .background(
+                                            if (item.incomeAmount > 0) WalletColors.MintChip
+                                            else WalletColors.MintChip.copy(alpha = 0.2f)
+                                        )
+                                )
+                                // Expense Bar (Coral)
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight(if (item.expenseAmount > 0) 1f else 0.1f)
+                                        .clip(WalletShapes.Pill)
+                                        .background(
+                                            if (item.expenseAmount > 0) WalletColors.Coral
+                                            else WalletColors.Coral.copy(alpha = 0.2f)
+                                        )
                                 )
                             }
-                        }
 
-                        Box(
-                            modifier = Modifier
-                                .height(115.dp)
-                                .fillMaxWidth(),
-                            contentAlignment = Alignment.BottomCenter
-                        ) {
-                            HatchedBar(
-                                heightRatio = item.valueRatio,
-                                isActive = item.isActive || isSelected,
-                                isPositive = item.isPositive,
-                                modifier = Modifier
-                                    .fillMaxWidth(0.70f)
-                                    .fillMaxHeight(),
-                                animationDelayMs = (index * 30).toLong()
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Day Label
+                            Text(
+                                text = item.dayLabel,
+                                style = WalletTypography.LabelS,
+                                color = if (isSelected) textColor else WalletColors.TextMuted
                             )
                         }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = item.dayLabel,
-                            style = WalletTypography.LabelS,
-                            color = if (isSelected) WalletColors.TextPrimary else WalletColors.TextMuted,
-                            maxLines = 1
-                        )
                     }
+                }
+            }
 
-                    if (index < items.size - 1) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
+            // Legend Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(WalletColors.MintChip))
+                    Text(text = "Income", style = WalletTypography.LabelS, color = WalletColors.TextMuted)
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(WalletColors.Coral))
+                    Text(text = "Expenses", style = WalletTypography.LabelS, color = WalletColors.TextMuted)
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun LegendItem(label: String, color: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(7.dp)
-                .clip(CircleShape)
-                .background(color)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = label,
-            style = WalletTypography.LabelS,
-            color = WalletColors.TextMuted
-        )
     }
 }

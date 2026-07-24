@@ -32,6 +32,28 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/apex_widget_info" />
         </receiver>
+
+        <receiver
+            android:name=".widget.ApexOverviewWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/apex_overview_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.ApexBillsWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/apex_bills_info" />
+        </receiver>
     </application>
 
 </manifest>
